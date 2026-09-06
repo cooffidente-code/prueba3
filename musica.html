@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Mi música — Emiliano Pineda Tuluminati</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0e14;
+    --panel:#12181f;
+    --panel2:#0d1218;
+    --border:#2a333d;
+    --border-bright:#4a5866;
+    --text:#E8E8E8;
+    --dim:#7C8494;
+    --lime:#C6FF3D;
+    --magenta:#FF3DAE;
+    --amber:#FFB400;
+    --cyan:#3DE0FF;
+  }
+  *{ box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+  html,body{ min-height:100%; }
+  body{
+    background: radial-gradient(ellipse 120% 90% at 50% 0%, #101825 0%, #0a0e14 55%, #060809 100%);
+    color:var(--text);
+    font-family:'JetBrains Mono', monospace;
+    position:relative;
+    overflow-x:hidden;
+    padding-bottom:80px;
+  }
+  .pixel{ font-family:'Press Start 2P', monospace; }
+  a{ color:inherit; text-decoration:none; }
+
+  .grid-bg{
+    position:fixed; inset:0; z-index:0;
+    background-image:
+      linear-gradient(rgba(198,255,61,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(198,255,61,0.03) 1px, transparent 1px);
+    background-size:40px 40px;
+    mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black 20%, transparent 70%);
+    animation: driftbg 22s ease-in-out infinite;
+  }
+  @keyframes driftbg{ 0%,100%{ background-position:0px 0px; } 50%{ background-position:14px -10px; } }
+  @media (prefers-reduced-motion: reduce){ .grid-bg{ animation:none; } }
+
+  .topbar{
+    position:relative; z-index:2; display:flex; align-items:center; justify-content:space-between;
+    padding:20px 6vw; border-bottom:1px solid var(--border);
+  }
+  .back-link{
+    display:flex; align-items:center; gap:8px; font-size:0.7rem; color:var(--dim);
+    border:1px solid var(--border-bright); padding:8px 12px; transition:color .2s, border-color .2s;
+  }
+  .back-link:hover{ color:var(--lime); border-color:var(--lime); }
+  .brand-mini{ font-size:0.62rem; color:var(--dim); letter-spacing:0.05em; }
+  .brand-mini .blink{ display:inline-block; width:6px; height:11px; background:var(--lime); margin-left:4px; animation:blink 1s steps(1) infinite; vertical-align:middle;}
+  @keyframes blink{ 50%{ opacity:0; } }
+
+  .page-head{ position:relative; z-index:2; padding:60px 6vw 40px; max-width:820px; }
+  .eyebrow{ font-size:0.65rem; color:var(--magenta); letter-spacing:0.1em; margin-bottom:14px; display:flex; align-items:center; gap:8px;}
+  .eyebrow .dot{ width:6px; height:6px; border-radius:50%; background:var(--magenta); }
+  .page-title{ font-size:clamp(2rem,6vw,3.2rem); line-height:1.05; margin-bottom:20px; }
+  .page-lede{ font-size:1rem; color:var(--dim); line-height:1.7; font-style:italic; max-width:560px; }
+  .page-lede .hl{ color:var(--text); font-style:normal; }
+
+  .count{ position:relative; z-index:2; padding:0 6vw 18px; font-size:0.65rem; color:var(--dim); }
+
+  .grid{ position:relative; z-index:2; padding:0 6vw; display:grid; grid-template-columns:repeat(3,1fr); gap:18px; }
+  @media (max-width:900px){ .grid{ grid-template-columns:repeat(2,1fr); } }
+  @media (max-width:560px){ .grid{ grid-template-columns:1fr; } }
+
+  .track{
+    display:block; border:1px solid var(--border); background:var(--panel); overflow:hidden;
+    transition:border-color .25s ease, transform .25s ease;
+  }
+  .track:not(.playing):hover{ border-color:var(--magenta); transform:translateY(-4px); }
+
+  .track-media{
+    aspect-ratio:16/9; position:relative; overflow:hidden; background:var(--panel2); cursor:pointer;
+  }
+  .track-thumb{ width:100%; height:100%; object-fit:cover; display:block; filter:saturate(0.7) brightness(0.75); }
+  .track-media::after{
+    content:""; position:absolute; inset:0;
+    background:linear-gradient(180deg, rgba(10,14,20,0.15), rgba(10,14,20,0.55));
+  }
+  .play-btn{
+    width:46px; height:46px; border-radius:50%; border:1.5px solid var(--lime);
+    display:flex; align-items:center; justify-content:center; position:absolute; z-index:2;
+    top:50%; left:50%; transform:translate(-50%,-50%);
+    background:rgba(10,14,20,0.55);
+  }
+  .play-btn::after{ content:""; border-style:solid; border-width:7px 0 7px 11px; border-color:transparent transparent transparent var(--lime); margin-left:3px; }
+
+  .track.playing .track-media{ cursor:default; }
+  .track.playing .track-media::after{ display:none; }
+  .track.playing .play-btn{ display:none; }
+  .track iframe{ width:100%; height:100%; display:block; border:0; position:relative; z-index:1; }
+
+  .track-body{ padding:14px; }
+  .track-tag{ font-size:0.58rem; letter-spacing:0.08em; margin-bottom:6px; color:var(--magenta); }
+  .track-title{ font-size:0.85rem; }
+
+  .footnote{
+    position:relative; z-index:2; margin:60px 6vw 0; padding:22px; border:1px dashed var(--border-bright);
+    font-size:0.72rem; color:var(--dim); max-width:640px; line-height:1.6;
+  }
+  .footnote .hl{ color:var(--amber); }
+</style>
+</head>
+<body>
+
+<div class="grid-bg"></div>
+
+<div class="topbar">
+  <a href="index.html" class="back-link">← Volver</a>
+  <div class="brand-mini pixel">TULUMINATI<span class="blink"></span></div>
+</div>
+
+<div class="page-head">
+  <div class="eyebrow"><span class="dot"></span>MI MÚSICA</div>
+  <h1 class="page-title">Odio hacer música<br>tanto como odio<br>contener la respiración.</h1>
+  <p class="page-lede">Pero de vez en cuando pasa. Y cuando pasa, <span class="hl">quiero que pase chingón.</span></p>
+</div>
+
+<div class="count">9 tracks</div>
+
+<div class="grid" id="grid">
+  <div class="track" data-id="X0PRREuKnZo">
+    <div class="track-media">
+      <img class="track-thumb" src="https://img.youtube.com/vi/X0PRREuKnZo/hqdefault.jpg" alt="Track 01" loading="lazy">
+      <div class="play-btn"></div>
+    </div>
+    <div class="track-body">
+      <div class="track-tag">TRACK · 01</div>
+      <div class="track-title">[Nombre de la canción 01]</div>
+    </div>
+  </div>
+  <div class="track" data-id="bz51tZa_AlE">
+    <div class="track-media">
+      <img class="track-thumb" src="https://img.youtube.com/vi/bz51tZa_AlE/hqdefault.jpg" alt="Track 02" loading="lazy">
+      <div class="play-btn"></div>
+    </div>
+    <div class="track-body">
+      <div class="track-tag">TRACK · 02</div>
+      <div class="track-title">[Nombre de la canción 02]</div>
+    </div>
+  </div>
+  <div class="track" data-id="S4DP49f9QXU">
+    <div class="track-media">
+      <img class="track-thumb" src="https://img.youtube.com/vi/S4DP49f9QXU/hqdefault.jpg" alt="Track 03" loading="lazy">
+      <div class="play-btn"></div>
+    </div>
+    <div class="track-body">
+      <div class="track-tag">TRACK · 03</div>
+      <div class="track-title">[Nombre de la canción 03]</div>
+    </div>
+  </div>
+  <div class="track" data-id="7I0oL3fFQHw">
+    <div class="track-media">
+      <img class="track-thumb" src="https://img.youtube.com/vi/7I0oL3fFQHw/hqdefault.jpg" alt="Track 04" loading="lazy">
+      <div class="play-btn"></div>
+    </div>
+    <div class="track-body">
+      <div class="track-tag">TRACK · 04</div>
+      <div class="track-title">[Nombre de la canción 04]</div>
+    </div>
+  </div>
+  <div class="track" data-id="8TlF2hK2ivo">
+    <div class="track-media">
+      <img class="track-thumb" src="https://img.youtube.com/vi/8TlF2hK2ivo/hqdefault.jpg" alt="Track 05" loading="lazy">
+      <div class="play-btn"></div>
+    </div>
+    <div class="track-body">
+      <div class="track-tag">TRACK · 05</div>
+      <div class="track-title">[Nombre de la canción 05]</div>
+    </div>
+  </div>
+  <div class="track" data-id="ZD0MguoCEj4">
+    <div class="track-media">
+      <img class="track-thumb" src="https://img.youtube.com/vi/ZD0MguoCEj4/hqdefault.jpg" alt="Track 06" loading="lazy">
+      <div class="play-btn"></div>
+    </div>
+    <div class="track-body">
+      <div class="track-tag">TRACK · 06</div>
+      <div class="track-title">[Nombre de la canción 06]</div>
+    </div>
+  </div>
+  <div class="track" data-id="E4dlLM6YuQM">
+    <div class="track-media">
+      <img class="track-thumb" src="https://img.youtube.com/vi/E4dlLM6YuQM/hqdefault.jpg" alt="Track 07" loading="lazy">
+      <div class="play-btn"></div>
+    </div>
+    <div class="track-body">
+      <div class="track-tag">TRACK · 07</div>
+      <div class="track-title">[Nombre de la canción 07]</div>
+    </div>
+  </div>
+  <div class="track" data-id="qyebUhgPpkU">
+    <div class="track-media">
+      <img class="track-thumb" src="https://img.youtube.com/vi/qyebUhgPpkU/hqdefault.jpg" alt="Track 08" loading="lazy">
+      <div class="play-btn"></div>
+    </div>
+    <div class="track-body">
+      <div class="track-tag">TRACK · 08</div>
+      <div class="track-title">[Nombre de la canción 08]</div>
+    </div>
+  </div>
+  <div class="track" data-id="g1rF7BBM45g">
+    <div class="track-media">
+      <img class="track-thumb" src="https://img.youtube.com/vi/g1rF7BBM45g/hqdefault.jpg" alt="Track 09" loading="lazy">
+      <div class="play-btn"></div>
+    </div>
+    <div class="track-body">
+      <div class="track-tag">TRACK · 09</div>
+      <div class="track-title">[Nombre de la canción 09]</div>
+    </div>
+  </div>
+</div>
+
+<div class="footnote">
+  <span class="hl">TIP</span> — toca el thumbnail para reproducir directo aquí, sin salir de la página. Mándame el nombre real de cada canción cuando quieras y reemplazo los títulos placeholder.
+</div>
+
+<script>
+  document.querySelectorAll('.track').forEach(track=>{
+    const media = track.querySelector('.track-media');
+    media.addEventListener('click', ()=>{
+      if(track.classList.contains('playing')) return;
+      const id = track.dataset.id;
+      media.innerHTML = `<iframe src="https://www.youtube.com/embed/${id}?autoplay=1" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+      track.classList.add('playing');
+    });
+  });
+</script>
+
+</body>
+</html>
