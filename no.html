@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Repara la Calle — Emiliano Pineda Tuluminati</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0e14; --panel:#12181f; --border:#2a333d; --border-bright:#4a5866;
+    --text:#E8E8E8; --dim:#7C8494; --lime:#C6FF3D; --magenta:#FF3DAE; --amber:#FFB400; --cyan:#3DE0FF;
+  }
+  *{ box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; user-select:none; }
+  html,body{ height:100%; }
+  body{
+    background: radial-gradient(ellipse 120% 90% at 50% 0%, #101825 0%, #0a0e14 55%, #060809 100%);
+    color:var(--text); font-family:'JetBrains Mono', monospace;
+    display:flex; flex-direction:column; align-items:center;
+    padding:20px 16px 30px; overflow-x:hidden;
+  }
+  .pixel{ font-family:'Press Start 2P', monospace; }
+  a{ color:inherit; text-decoration:none; }
+
+  .topbar{ width:100%; max-width:420px; display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; }
+  .back-link{
+    display:flex; align-items:center; gap:8px; font-size:0.68rem; color:var(--dim);
+    border:1px solid var(--border-bright); padding:8px 12px; transition:color .2s, border-color .2s;
+  }
+  .back-link:hover{ color:var(--lime); border-color:var(--lime); }
+  .brand-mini{ font-size:0.58rem; color:var(--dim); }
+
+  .title-block{ text-align:center; margin-bottom:14px; }
+  .title-block h1{ font-size:clamp(1.1rem,4vw,1.5rem); margin-bottom:8px; }
+  .title-block p{ font-size:0.72rem; color:var(--dim); max-width:340px; margin:0 auto; line-height:1.5; }
+
+  .game-shell{ position:relative; width:100%; max-width:340px; }
+  .canvas-frame{
+    position:relative; border:2px solid var(--border-bright); background:#1a1a1a;
+    box-shadow:0 20px 50px rgba(0,0,0,0.5);
+  }
+  canvas{
+    display:block; width:100%; height:auto;
+    image-rendering:pixelated; image-rendering:-moz-crisp-edges; image-rendering:crisp-edges;
+  }
+
+  .hud{
+    position:absolute; top:8px; left:8px; right:8px; display:flex; justify-content:space-between;
+    font-family:'Press Start 2P',monospace; font-size:0.5rem; color:var(--lime); z-index:3; pointer-events:none;
+    text-shadow:1px 1px 0 #000;
+  }
+
+  .overlay{
+    position:absolute; inset:0; z-index:5; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    background:rgba(6,8,10,0.88); text-align:center; padding:20px; gap:14px;
+  }
+  .overlay.hidden{ display:none; }
+  #overlayWin{ background:rgba(6,8,10,0.32); }
+  .overlay h2{ font-family:'Press Start 2P',monospace; font-size:1rem; color:var(--lime); line-height:1.6; }
+  .overlay h2.lose{ color:var(--magenta); }
+  .overlay p{ font-size:0.72rem; color:var(--dim); line-height:1.6; max-width:260px; }
+  .overlay button{
+    font-family:'JetBrains Mono',monospace; font-weight:700; font-size:0.72rem; letter-spacing:0.04em;
+    background:var(--lime); color:#0a0e14; border:none; padding:12px 22px; cursor:pointer; margin-top:4px;
+  }
+  .overlay button:hover{ background:#d8ff70; }
+
+  .controls{
+    display:flex; align-items:center; justify-content:space-between; margin-top:18px; width:100%; max-width:340px;
+  }
+  .dpad{ display:grid; grid-template-columns:44px 44px 44px; grid-template-rows:44px 44px 44px; gap:4px; }
+  .dpad button{
+    background:var(--panel); border:1px solid var(--border-bright); color:var(--lime);
+    font-size:1.1rem; display:flex; align-items:center; justify-content:center; cursor:pointer;
+    touch-action:none;
+  }
+  .dpad button:active{ background:var(--lime); color:#0a0e14; }
+  .dpad .up{ grid-column:2; grid-row:1; }
+  .dpad .left{ grid-column:1; grid-row:2; }
+  .dpad .down{ grid-column:2; grid-row:2; }
+  .dpad .right{ grid-column:3; grid-row:2; }
+
+  .kb-hint{ font-size:0.62rem; color:var(--dim); text-align:right; line-height:1.6; }
+  .kb-hint b{ color:var(--text); }
+
+  @media (min-width:640px){
+    .controls .dpad{ display:none; }
+    .kb-hint{ width:100%; text-align:center; }
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="index.html" class="back-link">← Volver</a>
+  <div class="brand-mini pixel">TULUMINATI</div>
+</div>
+
+<div class="title-block">
+  <h1 class="pixel">REPARA LA CALLE</h1>
+  <p>Mueve a Emiliano a los baches para arreglarlos automáticamente. Esquiva los carros — si te atropellan, game over. ¡Repara 5 para ganar!</p>
+</div>
+
+<div class="game-shell">
+  <div class="canvas-frame">
+    <canvas id="game" width="160" height="240"></canvas>
+    <div class="hud">
+      <span id="hudScore">BACHES: 0/5</span>
+      <span id="hudStatus"></span>
+    </div>
+
+    <div class="overlay" id="overlayStart">
+      <h2 class="pixel">REPARA<br>LA CALLE</h2>
+      <p>Flechas / WASD en PC.<br>Botones táctiles en celular.<br>Empiezas seguro en la banqueta.</p>
+      <button id="btnStart">JUGAR</button>
+    </div>
+
+    <div class="overlay hidden" id="overlayLose">
+      <h2 class="pixel lose">GAME OVER</h2>
+      <p id="loseText">Te atropelló un carro.</p>
+      <button id="btnRetry">REINTENTAR</button>
+    </div>
+
+    <div class="overlay hidden" id="overlayWin">
+      <h2 class="pixel">¡GANASTE!</h2>
+      <p>Reparaste los 5 baches. La calle te debe una.</p>
+      <button id="btnAgain">JUGAR OTRA VEZ</button>
+    </div>
+  </div>
+
+  <div class="controls">
+    <div class="dpad">
+      <button class="up" data-dir="up">▲</button>
+      <button class="left" data-dir="left">◀</button>
+      <button class="down" data-dir="down">▼</button>
+      <button class="right" data-dir="right">▶</button>
+    </div>
+    <div class="kb-hint">Usa <b>flechas</b><br>o <b>WASD</b></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+
+  const W = canvas.width, H = canvas.height;
+  const CAR_LANES = 5;
+  const TOTAL_ROWS = 6; // 5 car lanes + 1 sidewalk row at the bottom
+  const rowH = H / TOTAL_ROWS;
+  const SIDEWALK_ROW = 5;
+
+  const COLORS = {
+    road:'#1c1f22', roadAlt:'#20242a', laneLine:'#3a4048',
+    sidewalk:'#5a5f66', sidewalkLine:'#484d54',
+    pothole:'#050607', potholeCrack:'#3a2f1a',
+    patch:'#141618', patchFlash:'#e8ffb0',
+    skin:'#e8c99a', hair:'#2a1e14', shirt:'#111214', pants:'#0d0e10', shoe:'#f4f4f4',
+    carBody:['#FF3DAE','#FFB400','#3DE0FF','#8A5CFF'],
+  };
+
+  let dirs = { up:false, down:false, left:false, right:false };
+  let player, cars, potholes, patches, floaters, repaired, state, laneDir, walkTimer, walkFrame, audioCtx;
+  let celebrate = { time:0, duration:2600, centerX:0, centerY:0, stars:[], wonShown:false };
+  let returnTarget = { x:0, y:0 };
+  let musicTimeoutId = null, musicStopped = true;
+
+  function rowCenterY(i){ return i*rowH + rowH/2; }
+
+  function getAudioCtx(){
+    if(!audioCtx){
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    return audioCtx;
+  }
+
+  function playRepairSound(){
+    try{
+      const ctxA = getAudioCtx();
+      const now = ctxA.currentTime;
+      const notes = [880, 1320];
+      notes.forEach((freq, i)=>{
+        const osc = ctxA.createOscillator();
+        const gain = ctxA.createGain();
+        osc.type = 'square';
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.08, now + i*0.07);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + i*0.07 + 0.12);
+        osc.connect(gain).connect(ctxA.destination);
+        osc.start(now + i*0.07);
+        osc.stop(now + i*0.07 + 0.13);
+      });
+    }catch(e){ /* audio not available, ignore */ }
+  }
+
+  function stopVictoryMusic(){
+    musicStopped = true;
+    if(musicTimeoutId){ clearTimeout(musicTimeoutId); musicTimeoutId = null; }
+  }
+
+  function playVictoryMusic(){
+    musicStopped = false;
+    // short cheerful loop, alternating a melody line and a little bass pulse
+    const melody = [
+      {f:523.25,d:170},{f:659.25,d:170},{f:784.00,d:170},{f:659.25,d:130},
+      {f:523.25,d:170},{f:784.00,d:170},{f:880.00,d:210},{f:784.00,d:240},
+      {f:659.25,d:150},{f:784.00,d:150},{f:988.00,d:210},{f:880.00,d:280}
+    ];
+    const bass = [130.81, 164.81, 196.00, 164.81];
+    let idx = 0;
+    function playNote(){
+      if(musicStopped) return;
+      const note = melody[idx % melody.length];
+      try{
+        const ctxA = getAudioCtx();
+        const now = ctxA.currentTime;
+
+        const osc = ctxA.createOscillator();
+        const gain = ctxA.createGain();
+        osc.type = 'triangle';
+        osc.frequency.value = note.f;
+        gain.gain.setValueAtTime(0.0001, now);
+        gain.gain.linearRampToValueAtTime(0.07, now+0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + note.d/1000);
+        osc.connect(gain).connect(ctxA.destination);
+        osc.start(now);
+        osc.stop(now + note.d/1000 + 0.03);
+
+        if(idx % 3 === 0){
+          const bOsc = ctxA.createOscillator();
+          const bGain = ctxA.createGain();
+          bOsc.type = 'square';
+          bOsc.frequency.value = bass[(idx/3) % bass.length];
+          bGain.gain.setValueAtTime(0.001, now);
+          bGain.gain.linearRampToValueAtTime(0.045, now+0.02);
+          bGain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+          bOsc.connect(bGain).connect(ctxA.destination);
+          bOsc.start(now);
+          bOsc.stop(now + 0.32);
+        }
+      }catch(e){ /* audio not available, ignore */ }
+      idx++;
+      musicTimeoutId = setTimeout(playNote, note.d + 30);
+    }
+    playNote();
+  }
+
+  function initGame(){
+    stopVictoryMusic();
+    player = { x: W/2-5, y: rowCenterY(SIDEWALK_ROW)-7, w:10, h:14, speed:0.85, facing:'up' };
+    laneDir = [];
+    for(let i=0;i<CAR_LANES;i++) laneDir.push(i % 2 === 0 ? 1 : -1);
+
+    cars = [];
+    for(let i=0;i<CAR_LANES;i++){
+      const count = 2;
+      for(let c=0;c<count;c++) cars.push(spawnCar(i, c, count));
+    }
+
+    potholes = [];
+    for(let i=0;i<3;i++) potholes.push(spawnPothole());
+
+    patches = [];
+    floaters = [];
+    repaired = 0;
+    walkTimer = 0;
+    walkFrame = 0;
+    state = 'playing';
+    updateHud();
+  }
+
+  function spawnCar(laneIndex, seedIndex, total){
+    const dir = laneDir[laneIndex];
+    const w = 22, h = 10;
+    const gap = W / total;
+    let x = seedIndex * gap + Math.random()*10;
+    if(dir < 0) x = W - x;
+    const speed = (0.5 + Math.random()*0.5) * dir * (0.9 + laneIndex*0.08);
+    return { lane:laneIndex, x, y: rowCenterY(laneIndex) - h/2, w, h, speed, color: COLORS.carBody[laneIndex % COLORS.carBody.length] };
+  }
+
+  function spawnPothole(){
+    const lane = Math.floor(Math.random()*CAR_LANES);
+    const r = 6;
+    const x = r + Math.random()*(W - r*2);
+    return { x, y: rowCenterY(lane), r };
+  }
+
+  function updateHud(){
+    document.getElementById('hudScore').textContent = 'BACHES: ' + repaired + '/5';
+  }
+
+  function rectsOverlap(a,b){
+    return a.x < b.x+b.w && a.x+a.w > b.x && a.y < b.y+b.h && a.y+a.h > b.y;
+  }
+
+  function startReturnToSidewalk(){
+    state = 'returning';
+    returnTarget = { x: W/2 - player.w/2, y: rowCenterY(SIDEWALK_ROW) - player.h/2 };
+  }
+
+  function startCelebration(){
+    state = 'celebrate';
+    celebrate.time = 0;
+    celebrate.wonShown = false;
+    celebrate.centerX = player.x + player.w/2;
+    celebrate.centerY = player.y + player.h/2;
+    celebrate.stars = [];
+    for(let i=0;i<20;i++){
+      celebrate.stars.push({
+        x: Math.random()*W, y: Math.random()*H,
+        size: 1 + Math.random()*1.5,
+        phase: Math.random()*Math.PI*2,
+        color: Math.random() < 0.5 ? '#ffffff' : '#3DE0FF'
+      });
+    }
+    playVictoryMusic();
+  }
+
+  function update(dt){
+    if(state === 'returning'){
+      const dx = returnTarget.x - player.x;
+      const dy = returnTarget.y - player.y;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      if(dist < 1.5){ startCelebration(); return; }
+      const spd = player.speed*1.6;
+      player.x += (dx/dist)*spd;
+      player.y += (dy/dist)*spd;
+      player.facing = Math.abs(dx) > Math.abs(dy) ? (dx>0?'right':'left') : (dy>0?'down':'up');
+      walkTimer += dt;
+      if(walkTimer > 160){ walkTimer = 0; walkFrame = walkFrame === 0 ? 1 : 0; }
+      return;
+    }
+    if(state === 'celebrate'){
+      celebrate.time += dt;
+      if(!celebrate.wonShown && celebrate.time >= celebrate.duration){
+        celebrate.wonShown = true;
+        document.getElementById('overlayWin').classList.remove('hidden');
+      }
+      return;
+    }
+    if(state !== 'playing') return;
+
+    let moving = false;
+    if(dirs.up){ player.y -= player.speed*1.6; player.facing='up'; moving=true; }
+    if(dirs.down){ player.y += player.speed*1.6; player.facing='down'; moving=true; }
+    if(dirs.left){ player.x -= player.speed*1.6; player.facing='left'; moving=true; }
+    if(dirs.right){ player.x += player.speed*1.6; player.facing='right'; moving=true; }
+
+    player.x = Math.max(0, Math.min(W-player.w, player.x));
+    player.y = Math.max(0, Math.min(H-player.h, player.y));
+
+    if(moving){
+      walkTimer += dt;
+      if(walkTimer > 160){ walkTimer = 0; walkFrame = walkFrame === 0 ? 1 : 0; }
+    } else {
+      walkFrame = 0; walkTimer = 0;
+    }
+
+    cars.forEach(car=>{
+      car.x += car.speed;
+      if(car.speed > 0 && car.x > W+30) car.x = -30 - Math.random()*40;
+      if(car.speed < 0 && car.x < -30) car.x = W + Math.random()*40;
+    });
+
+    const playerBox = { x:player.x, y:player.y, w:player.w, h:player.h };
+    for(const car of cars){
+      if(rectsOverlap(playerBox, car)){ loseGame(); return; }
+    }
+
+    for(let i=potholes.length-1; i>=0; i--){
+      const p = potholes[i];
+      const cx = player.x + player.w/2, cy = player.y + player.h/2;
+      const dx = cx - p.x, dy = cy - p.y;
+      if(Math.sqrt(dx*dx+dy*dy) < p.r + 4){
+        potholes.splice(i,1);
+        patches.push({ x:p.x, y:p.y, r:p.r, flash:1 });
+        floaters.push({ x:p.x, y:p.y-6, life:1 });
+        playRepairSound();
+        repaired++;
+        updateHud();
+        if(repaired >= 5){ startReturnToSidewalk(); return; }
+        potholes.push(spawnPothole());
+      }
+    }
+
+    patches.forEach(p=>{ if(p.flash>0) p.flash = Math.max(0, p.flash - dt/400); });
+    for(let i=floaters.length-1;i>=0;i--){
+      floaters[i].y -= dt*0.03;
+      floaters[i].life -= dt/900;
+      if(floaters[i].life <= 0) floaters.splice(i,1);
+    }
+  }
+
+  function drawPixelPlayer(x,y,frame,facing){
+    const footOffset = frame === 0 ? 0 : 1;
+    // hair
+    ctx.fillStyle = COLORS.hair;
+    ctx.fillRect(x+2, y, 6, 2);
+    // face/skin head
+    ctx.fillStyle = COLORS.skin;
+    ctx.fillRect(x+2, y+2, 6, 3);
+    // torso (sleeveless shirt) - narrower, black
+    ctx.fillStyle = COLORS.shirt;
+    ctx.fillRect(x+2, y+5, 6, 4);
+    // arms (skin) flanking torso
+    ctx.fillStyle = COLORS.skin;
+    ctx.fillRect(x, y+5, 2, 4);
+    ctx.fillRect(x+8, y+5, 2, 4);
+    // pants
+    ctx.fillStyle = COLORS.pants;
+    ctx.fillRect(x+2, y+9, 6, 3);
+    // shoes (white) with simple 2-frame walk offset
+    ctx.fillStyle = COLORS.shoe;
+    if(footOffset === 0){
+      ctx.fillRect(x+1, y+12, 3, 2);
+      ctx.fillRect(x+6, y+12, 3, 2);
+    } else {
+      ctx.fillRect(x+2, y+12, 3, 2);
+      ctx.fillRect(x+5, y+12, 3, 2);
+    }
+  }
+
+  function drawCar(car){
+    ctx.fillStyle = car.color;
+    ctx.fillRect(car.x, car.y, car.w, car.h);
+    ctx.fillStyle = 'rgba(255,255,255,0.35)';
+    ctx.fillRect(car.x+3, car.y+2, car.w-6, car.h-6);
+    ctx.fillStyle = '#0a0e14';
+    ctx.fillRect(car.x+2, car.y+car.h-2, 4, 2);
+    ctx.fillRect(car.x+car.w-6, car.y+car.h-2, 4, 2);
+  }
+
+  function drawPothole(p){
+    ctx.fillStyle = COLORS.pothole;
+    ctx.beginPath();
+    ctx.ellipse(p.x, p.y, p.r, p.r*0.7, 0, 0, Math.PI*2);
+    ctx.fill();
+    ctx.strokeStyle = COLORS.potholeCrack;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(p.x-p.r*0.6, p.y-p.r*0.3);
+    ctx.lineTo(p.x+p.r*0.5, p.y+p.r*0.4);
+    ctx.stroke();
+  }
+
+  function drawPatch(p){
+    const t = p.flash;
+    ctx.fillStyle = t > 0 ? COLORS.patchFlash : COLORS.patch;
+    if(t > 0) ctx.globalAlpha = 0.4 + t*0.6;
+    ctx.beginPath();
+    ctx.ellipse(p.x, p.y, p.r, p.r*0.7, 0, 0, Math.PI*2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    if(t <= 0){
+      ctx.fillStyle = COLORS.patch;
+      ctx.beginPath();
+      ctx.ellipse(p.x, p.y, p.r, p.r*0.7, 0, 0, Math.PI*2);
+      ctx.fill();
+    }
+  }
+
+  function drawFloaters(){
+    ctx.font = '6px monospace';
+    ctx.textAlign = 'center';
+    floaters.forEach(f=>{
+      ctx.fillStyle = `rgba(198,255,61,${Math.max(0,f.life)})`;
+      ctx.fillText('reparado', f.x, f.y);
+    });
+    ctx.textAlign = 'left';
+  }
+
+  function render(){
+    for(let i=0;i<CAR_LANES;i++){
+      ctx.fillStyle = i % 2 === 0 ? COLORS.road : COLORS.roadAlt;
+      ctx.fillRect(0, i*rowH, W, rowH);
+    }
+    // sidewalk row
+    ctx.fillStyle = COLORS.sidewalk;
+    ctx.fillRect(0, SIDEWALK_ROW*rowH, W, rowH);
+    ctx.strokeStyle = COLORS.sidewalkLine;
+    ctx.lineWidth = 1;
+    for(let x=0; x<W; x+=10){
+      ctx.beginPath();
+      ctx.moveTo(x, SIDEWALK_ROW*rowH);
+      ctx.lineTo(x, H);
+      ctx.stroke();
+    }
+
+    ctx.strokeStyle = COLORS.laneLine;
+    ctx.lineWidth = 1;
+    ctx.setLineDash([5,4]);
+    for(let i=1;i<CAR_LANES;i++){
+      ctx.beginPath();
+      ctx.moveTo(0, i*rowH);
+      ctx.lineTo(W, i*rowH);
+      ctx.stroke();
+    }
+    ctx.setLineDash([]);
+
+    patches.forEach(drawPatch);
+    potholes.forEach(drawPothole);
+    cars.forEach(drawCar);
+
+    if(state === 'celebrate'){
+      drawCelebration();
+    } else {
+      drawPixelPlayer(player.x, player.y, walkFrame, player.facing);
+    }
+    drawFloaters();
+  }
+
+  function drawCelebration(){
+    const progress = Math.min(1, celebrate.time / celebrate.duration);
+
+    // darken the street
+    ctx.fillStyle = `rgba(0,0,0,${0.7*progress})`;
+    ctx.fillRect(0, 0, W, H);
+
+    // twinkling stars
+    celebrate.stars.forEach(s=>{
+      const tw = 0.35 + 0.65*Math.abs(Math.sin(celebrate.time/200 + s.phase));
+      ctx.globalAlpha = tw*progress;
+      ctx.fillStyle = s.color;
+      ctx.fillRect(s.x, s.y, s.size, s.size);
+    });
+    ctx.globalAlpha = 1;
+
+    // blink briefly at the start, then grow + bounce
+    const blinkDuration = 550;
+    let visible = true;
+    if(celebrate.time < blinkDuration){
+      visible = Math.floor(celebrate.time/90) % 2 === 0;
+    }
+
+    if(visible){
+      const growProgress = Math.min(1, celebrate.time / (celebrate.duration*0.65));
+      const eased = Math.pow(growProgress, 0.55);
+      const targetScale = 6.4; // grows to roughly ~20% of the screen
+      const scale = 1 + eased*(targetScale-1);
+      const bounce = Math.sin(celebrate.time/130) * 5 * eased;
+
+      const danceFrame = Math.floor(celebrate.time/140) % 2;
+      ctx.save();
+      ctx.translate(celebrate.centerX, celebrate.centerY - (player.h/2)*(scale-1) + bounce);
+      ctx.scale(scale, scale);
+      drawPixelPlayer(-player.w/2, -player.h/2, danceFrame, player.facing);
+      ctx.restore();
+    }
+  }
+
+  let lastTime = performance.now();
+  function loop(now){
+    const dt = Math.min(50, now - lastTime);
+    lastTime = now;
+    update(dt);
+    render();
+    requestAnimationFrame(loop);
+  }
+
+  function loseGame(){
+    state = 'lose';
+    document.getElementById('overlayLose').classList.remove('hidden');
+  }
+  function winGame(){
+    state = 'win';
+    document.getElementById('overlayWin').classList.remove('hidden');
+  }
+
+  function hideAllOverlays(){
+    document.getElementById('overlayStart').classList.add('hidden');
+    document.getElementById('overlayLose').classList.add('hidden');
+    document.getElementById('overlayWin').classList.add('hidden');
+  }
+
+  document.getElementById('btnStart').addEventListener('click', ()=>{ hideAllOverlays(); initGame(); });
+  document.getElementById('btnRetry').addEventListener('click', ()=>{ hideAllOverlays(); initGame(); });
+  document.getElementById('btnAgain').addEventListener('click', ()=>{ hideAllOverlays(); initGame(); });
+
+  const keyMap = {
+    ArrowUp:'up', ArrowDown:'down', ArrowLeft:'left', ArrowRight:'right',
+    w:'up', s:'down', a:'left', d:'right', W:'up', S:'down', A:'left', D:'right'
+  };
+  window.addEventListener('keydown', e=>{
+    const d = keyMap[e.key];
+    if(d){ dirs[d] = true; e.preventDefault(); }
+  });
+  window.addEventListener('keyup', e=>{
+    const d = keyMap[e.key];
+    if(d){ dirs[d] = false; e.preventDefault(); }
+  });
+
+  document.querySelectorAll('.dpad button').forEach(btn=>{
+    const d = btn.dataset.dir;
+    const press = (e)=>{ e.preventDefault(); dirs[d] = true; };
+    const release = (e)=>{ e.preventDefault(); dirs[d] = false; };
+    btn.addEventListener('pointerdown', press);
+    btn.addEventListener('pointerup', release);
+    btn.addEventListener('pointerleave', release);
+    btn.addEventListener('pointercancel', release);
+  });
+
+  // idle static frame behind the start overlay
+  player = { x: W/2-5, y: rowCenterY(SIDEWALK_ROW)-7, w:10, h:14, facing:'up' };
+  cars = []; potholes = []; patches = []; floaters = []; repaired = 0; walkFrame = 0;
+  for(let i=0;i<CAR_LANES;i++){ cars.push({x:Math.random()*W, y:rowCenterY(i)-5, w:22, h:10, color:COLORS.carBody[i%COLORS.carBody.length]}); }
+  render();
+
+  state = 'idle';
+  requestAnimationFrame(loop);
+})();
+</script>
+
+</body>
+</html>
