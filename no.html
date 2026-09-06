@@ -10,7 +10,12 @@
     --bg:#0a0e14; --panel:#12181f; --border:#2a333d; --border-bright:#4a5866;
     --text:#E8E8E8; --dim:#7C8494; --lime:#C6FF3D; --magenta:#FF3DAE; --amber:#FFB400; --cyan:#3DE0FF;
   }
-  *{ box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; user-select:none; }
+  *{
+    box-sizing:border-box; margin:0; padding:0;
+    -webkit-tap-highlight-color:transparent;
+    user-select:none; -webkit-user-select:none; -ms-user-select:none;
+    -webkit-touch-callout:none;
+  }
   html,body{ height:100%; }
   body{
     background: radial-gradient(ellipse 120% 90% at 50% 0%, #101825 0%, #0a0e14 55%, #060809 100%);
@@ -67,11 +72,13 @@
   .controls{
     display:flex; align-items:center; justify-content:space-between; margin-top:18px; width:100%; max-width:340px;
   }
-  .dpad{ display:grid; grid-template-columns:44px 44px 44px; grid-template-rows:44px 44px 44px; gap:4px; }
+  .dpad{ display:grid; grid-template-columns:58px 58px 58px; grid-template-rows:58px 58px 58px; gap:6px; }
   .dpad button{
     background:var(--panel); border:1px solid var(--border-bright); color:var(--lime);
-    font-size:1.1rem; display:flex; align-items:center; justify-content:center; cursor:pointer;
-    touch-action:none;
+    font-size:1.4rem; display:flex; align-items:center; justify-content:center; cursor:pointer;
+    touch-action:none; -webkit-touch-callout:none;
+    -webkit-user-select:none; user-select:none;
+    -webkit-tap-highlight-color:transparent;
   }
   .dpad button:active{ background:var(--lime); color:#0a0e14; }
   .dpad .up{ grid-column:2; grid-row:1; }
@@ -275,7 +282,7 @@
     const gap = W / total;
     let x = seedIndex * gap + Math.random()*10;
     if(dir < 0) x = W - x;
-    const speed = (0.5 + Math.random()*0.5) * dir * (0.9 + laneIndex*0.08);
+    const speed = (30 + Math.random()*30) * dir * (0.9 + laneIndex*0.08); // px per second
     return { lane:laneIndex, x, y: rowCenterY(laneIndex) - h/2, w, h, speed, color: COLORS.carBody[laneIndex % COLORS.carBody.length] };
   }
 
@@ -317,15 +324,18 @@
     playVictoryMusic();
   }
 
+  const PLAYER_SPEED = 82; // pixels per second, so movement feels the same on every screen
+
   function update(dt){
+    const dtSec = dt/1000;
     if(state === 'returning'){
       const dx = returnTarget.x - player.x;
       const dy = returnTarget.y - player.y;
       const dist = Math.sqrt(dx*dx + dy*dy);
       if(dist < 1.5){ startCelebration(); return; }
-      const spd = player.speed*1.6;
-      player.x += (dx/dist)*spd;
-      player.y += (dy/dist)*spd;
+      const step = PLAYER_SPEED * dtSec;
+      player.x += (dx/dist)*step;
+      player.y += (dy/dist)*step;
       player.facing = Math.abs(dx) > Math.abs(dy) ? (dx>0?'right':'left') : (dy>0?'down':'up');
       walkTimer += dt;
       if(walkTimer > 160){ walkTimer = 0; walkFrame = walkFrame === 0 ? 1 : 0; }
@@ -342,10 +352,11 @@
     if(state !== 'playing') return;
 
     let moving = false;
-    if(dirs.up){ player.y -= player.speed*1.6; player.facing='up'; moving=true; }
-    if(dirs.down){ player.y += player.speed*1.6; player.facing='down'; moving=true; }
-    if(dirs.left){ player.x -= player.speed*1.6; player.facing='left'; moving=true; }
-    if(dirs.right){ player.x += player.speed*1.6; player.facing='right'; moving=true; }
+    const step = PLAYER_SPEED * dtSec;
+    if(dirs.up){ player.y -= step; player.facing='up'; moving=true; }
+    if(dirs.down){ player.y += step; player.facing='down'; moving=true; }
+    if(dirs.left){ player.x -= step; player.facing='left'; moving=true; }
+    if(dirs.right){ player.x += step; player.facing='right'; moving=true; }
 
     player.x = Math.max(0, Math.min(W-player.w, player.x));
     player.y = Math.max(0, Math.min(H-player.h, player.y));
@@ -358,7 +369,7 @@
     }
 
     cars.forEach(car=>{
-      car.x += car.speed;
+      car.x += car.speed * dtSec;
       if(car.speed > 0 && car.x > W+30) car.x = -30 - Math.random()*40;
       if(car.speed < 0 && car.x < -30) car.x = W + Math.random()*40;
     });
@@ -590,15 +601,34 @@
     if(d){ dirs[d] = false; e.preventDefault(); }
   });
 
+  function resetAllDirs(){
+    dirs.up = false; dirs.down = false; dirs.left = false; dirs.right = false;
+  }
+
   document.querySelectorAll('.dpad button').forEach(btn=>{
     const d = btn.dataset.dir;
     const press = (e)=>{ e.preventDefault(); dirs[d] = true; };
-    const release = (e)=>{ e.preventDefault(); dirs[d] = false; };
+    const release = (e)=>{ if(e) e.preventDefault(); dirs[d] = false; };
+    // pointer events (most browsers)
     btn.addEventListener('pointerdown', press);
     btn.addEventListener('pointerup', release);
     btn.addEventListener('pointerleave', release);
     btn.addEventListener('pointercancel', release);
+    // touch events too, as a fallback for browsers (some Android/Samsung Internet
+    // versions) that don't reliably fire pointerup/pointerleave on fast taps
+    btn.addEventListener('touchstart', press, { passive:false });
+    btn.addEventListener('touchend', release, { passive:false });
+    btn.addEventListener('touchcancel', release, { passive:false });
   });
+
+  // Safety net: if a release event ever fails to fire on the exact button
+  // (common on some Android browsers when the finger slides slightly),
+  // any pointer/touch ending anywhere on the page clears all directions
+  // so the character never gets stuck moving in one direction forever.
+  ['pointerup','pointercancel','touchend','touchcancel'].forEach(evt=>{
+    document.addEventListener(evt, resetAllDirs, { passive:true });
+  });
+  window.addEventListener('blur', resetAllDirs);
 
   // idle static frame behind the start overlay
   player = { x: W/2-5, y: rowCenterY(SIDEWALK_ROW)-7, w:10, h:14, facing:'up' };
