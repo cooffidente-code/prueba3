@@ -1,17 +1,297 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Prueba GitHub Pages</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Emiliano Pineda Tuluminati — Retrato</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0e14;
+    --panel:#12181f;
+    --panel2:#0d1218;
+    --border:#2a333d;
+    --border-bright:#4a5866;
+    --text:#E8E8E8;
+    --dim:#7C8494;
+    --lime:#C6FF3D;
+    --magenta:#FF3DAE;
+    --amber:#FFB400;
+    --cyan:#3DE0FF;
+  }
+  *{ box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+  html,body{ min-height:100%; }
+  body{
+    background:
+      radial-gradient(ellipse 120% 90% at 50% 0%, #101825 0%, #0a0e14 55%, #060809 100%);
+    color:var(--text);
+    font-family:'JetBrains Mono', monospace;
+    display:flex; align-items:center; justify-content:center;
+    padding:34px 16px 90px;
+    position:relative;
+    overflow-x:hidden;
+  }
+  .pixel{ font-family:'Press Start 2P', monospace; }
+
+  .grid-bg{
+    position:fixed; inset:0; z-index:0;
+    background-image:
+      linear-gradient(rgba(198,255,61,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(198,255,61,0.03) 1px, transparent 1px);
+    background-size:40px 40px;
+    mask-image: radial-gradient(ellipse 80% 70% at 50% 40%, black 20%, transparent 75%);
+    animation: driftbg 22s ease-in-out infinite;
+  }
+  @keyframes driftbg{
+    0%,100%{ background-position:0px 0px; }
+    50%{ background-position:14px -10px; }
+  }
+  @media (prefers-reduced-motion: reduce){
+    .grid-bg{ animation:none; }
+  }
+
+  .top-label{
+    position:fixed; top:18px; left:50%; transform:translateX(-50%); z-index:2;
+    text-align:center; pointer-events:none;
+  }
+  .top-label .t1{ font-size:clamp(0.8rem,2.6vw,1.25rem); letter-spacing:0.05em; }
+  .top-label .t2{ font-size:0.6rem; color:var(--dim); margin-top:8px; letter-spacing:0.05em; }
+  .top-label .blink{ display:inline-block; width:7px; height:12px; background:var(--lime); margin-left:4px; animation:blink 1s steps(1) infinite; vertical-align:middle;}
+  @keyframes blink{ 50%{ opacity:0; } }
+
+  .portrait-wrap{
+    position:relative; z-index:1; max-width:520px; width:100%; margin-top:56px;
+    overflow:hidden;
+  }
+  .portrait-stage{
+    position:relative; width:100%;
+    animation: breathe 9s ease-in-out infinite;
+    transform-origin:50% 35%;
+    will-change: transform;
+  }
+  .portrait-wrap img{ width:100%; display:block; user-select:none; -webkit-user-drag:none; pointer-events:none; }
+
+  @keyframes breathe{
+    0%   { transform: scale(1.03)  translate(0%, 0%)       rotate(0deg); }
+    22%  { transform: scale(1.09)  translate(-2.2%, 1.4%)  rotate(-0.6deg); }
+    48%  { transform: scale(1.14)  translate(1.4%, -1.8%)  rotate(0.5deg); }
+    73%  { transform: scale(1.08)  translate(2%, 1%)       rotate(0.7deg); }
+    100% { transform: scale(1.03)  translate(0%, 0%)       rotate(0deg); }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .portrait-stage{ animation-duration: 20s; }
+  }
+
+  .hotspot{
+    position:absolute; width:34px; height:34px; margin:-17px 0 0 -17px;
+    border-radius:50%; border:1.5px solid var(--lime); cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    background:rgba(10,14,20,0.35); backdrop-filter:blur(1px);
+    animation:hotpulse 2.2s ease-in-out infinite;
+    z-index:3;
+  }
+  .hotspot::after{
+    content:""; position:absolute; inset:-8px; border:1px solid rgba(198,255,61,0.3); border-radius:50%;
+    animation:ring 2.2s ease-out infinite;
+  }
+  .hotspot .plus{ color:var(--lime); font-size:0.8rem; font-family:'JetBrains Mono',monospace; }
+  .hotspot.active{ border-color:var(--magenta); }
+  .hotspot.active .plus{ color:var(--magenta); }
+  .hotspot.active::after{ border-color:rgba(255,61,174,0.4); }
+
+  @keyframes hotpulse{ 0%,100%{ box-shadow:0 0 0 0 rgba(198,255,61,0.25);} 50%{ box-shadow:0 0 0 6px rgba(198,255,61,0);} }
+  @keyframes ring{ 0%{ transform:scale(0.8); opacity:0.8;} 100%{ transform:scale(1.6); opacity:0;} }
+
+  /* Cards live at the top level of the page (not inside the zooming/clipped portrait)
+     so they are positioned via JS with position:fixed and are always fully on-screen. */
+  .card{
+    position:fixed; z-index:50; width:230px;
+    background:var(--panel); border:1px solid var(--lime);
+    box-shadow:0 14px 40px rgba(0,0,0,0.6);
+    padding:14px; opacity:0; pointer-events:none; transform:translateY(6px);
+    transition:opacity .22s ease, transform .22s ease;
+  }
+  .card.show{ opacity:1; pointer-events:all; transform:translateY(0); }
+  .card .ctag{ font-size:0.6rem; color:var(--lime); letter-spacing:0.08em; margin-bottom:8px; display:flex; align-items:center; gap:6px;}
+  .card .ctag .dot{ width:6px; height:6px; background:var(--lime); border-radius:50%; }
+  .card h4{ font-size:0.82rem; margin-bottom:8px; letter-spacing:0.02em; }
+  .card p{ font-size:0.72rem; color:var(--dim); line-height:1.5; margin-bottom:10px; }
+  .card a.go{ font-size:0.68rem; color:var(--text); border:1px solid var(--border-bright); padding:7px 10px; display:inline-flex; align-items:center; gap:6px; text-decoration:none;}
+  .card a.go:hover{ border-color:var(--lime); color:var(--lime); }
+  .card .close{ position:absolute; top:8px; right:10px; font-size:0.7rem; color:var(--dim); cursor:pointer; }
+
+  @keyframes cardglitch{
+    0%{ clip-path: inset(0 0 0 0); }
+    10%{ clip-path: inset(10% 0 60% 0); transform:translateX(-2px);}
+    20%{ clip-path: inset(0 0 0 0); transform:translateX(0);}
+    100%{ clip-path: inset(0 0 0 0); }
+  }
+  .card.show{ animation:cardglitch .25s steps(2); }
+
+  .hint{
+    position:fixed; bottom:22px; left:50%; transform:translateX(-50%); z-index:2;
+    font-size:0.6rem; color:var(--dim); text-align:center; letter-spacing:0.03em;
+    display:flex; align-items:center; gap:8px;
+  }
+  .hint .dot2{ width:6px; height:6px; border-radius:50%; background:var(--lime); animation:blink 1.4s steps(1) infinite; }
+
+  @media (max-width:480px){
+    .card{ width:200px; }
+  }
+</style>
 </head>
 <body>
 
-    <h1>🚀 ¡GitHub Pages funciona!</h1>
+<div class="grid-bg"></div>
 
-    <p>Si estás viendo este mensaje, el sitio está funcionando correctamente.</p>
+<div class="top-label">
+  <div class="t1 pixel">EMILIANO PINEDA TULUMINATI</div>
+  <div class="t2">TOCA_LOS_FRAGMENTOS.exe <span class="blink"></span></div>
+</div>
 
-    <p>Repositorio de prueba de EmilianoPinedaMx.</p>
+<div class="portrait-wrap" id="portraitWrap">
+ <div class="portrait-stage" id="portraitStage">
+  <img src="retrato-tuluminati.jpg" alt="Retrato fragmentado de Emiliano Pineda / Tuluminati">
+
+  <div class="hotspot" style="left:44.5%; top:31.8%;" data-card="c-videos"><span class="plus">+</span></div>
+  <div class="hotspot" style="left:53%; top:34%;" data-card="c-fotos"><span class="plus">+</span></div>
+  <div class="hotspot" style="left:51%; top:41.8%;" data-card="c-musica"><span class="plus">+</span></div>
+  <div class="hotspot" style="left:26%; top:59.2%;" data-card="c-sobre"><span class="plus">+</span></div>
+  <div class="hotspot" style="left:49%; top:56%;" data-card="c-merch"><span class="plus">+</span></div>
+  <div class="hotspot" style="left:39%; top:66.7%;" data-card="c-egg"><span class="plus">+</span></div>
+  <div class="hotspot" style="left:74%; top:67.8%;" data-card="c-redes"><span class="plus">+</span></div>
+ </div>
+</div>
+
+<div class="hint"><span class="dot2"></span>TOCA LOS PUNTOS SOBRE LA IMAGEN</div>
+
+<!-- Cards: siblings at top level of <body>, positioned dynamically via JS so they are never clipped -->
+<div class="card" id="c-videos">
+  <span class="close">×</span>
+  <div class="ctag"><span class="dot"></span>VIDEOS</div>
+  <h4>Lo que grabo</h4>
+  <p>Mira los videos que hago en distintas redes.</p>
+  <a class="go" href="#">Da click aqui →</a>
+</div>
+
+<div class="card" id="c-fotos">
+  <span class="close">×</span>
+  <div class="ctag"><span class="dot"></span>FOTOS</div>
+  <h4>Detras de camara</h4>
+  <p>El archivo visual de todo lo que no sube a redes.</p>
+  <a class="go" href="#">Da click aqui →</a>
+</div>
+
+<div class="card" id="c-musica">
+  <span class="close">×</span>
+  <div class="ctag"><span class="dot"></span>AUDIO</div>
+  <h4>Lo que suena</h4>
+  <p>Musica, tracks y sesiones que voy soltando.</p>
+  <a class="go" href="#">Da click aqui →</a>
+</div>
+
+<div class="card" id="c-sobre">
+  <span class="close">×</span>
+  <div class="ctag"><span class="dot"></span>SOBRE MI</div>
+  <h4>Quien anda aqui</h4>
+  <p>La historia real detras de Tuluminati.</p>
+  <a class="go" href="#">Da click aqui →</a>
+</div>
+
+<div class="card" id="c-merch">
+  <span class="close">×</span>
+  <div class="ctag"><span class="dot"></span>MERCH</div>
+  <h4>Lo que se compra</h4>
+  <p>Ropa y piezas limitadas de Tuluminati.</p>
+  <a class="go" href="#">Da click aqui →</a>
+</div>
+
+<div class="card" id="c-egg">
+  <span class="close">×</span>
+  <div class="ctag"><span class="dot"></span>???</div>
+  <h4>No deberias tocar esto</h4>
+  <p>Encontraste algo que no estaba en el mapa.</p>
+  <a class="go" href="#">Ver que es →</a>
+</div>
+
+<div class="card" id="c-redes">
+  <span class="close">×</span>
+  <div class="ctag"><span class="dot"></span>REDES</div>
+  <h4>Sigueme</h4>
+  <p>Todas las plataformas en un solo lugar.</p>
+  <a class="go" href="#">Da click aqui →</a>
+</div>
+
+<script>
+  const hotspots = document.querySelectorAll('.hotspot');
+  const cards = document.querySelectorAll('.card');
+  const MARGIN = 14;
+
+  function closeAll(){
+    cards.forEach(c=> c.classList.remove('show'));
+    hotspots.forEach(h=> h.classList.remove('active'));
+  }
+
+  function positionCard(card, hotspot){
+    const hRect = hotspot.getBoundingClientRect();
+    const cw = card.offsetWidth || 230;
+    const ch = card.offsetHeight || 160;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+
+    // Prefer placing to the right of the hotspot; flip to left if it would overflow.
+    let left = hRect.right + 16;
+    if(left + cw + MARGIN > vw){
+      left = hRect.left - cw - 16;
+    }
+    // If still doesn't fit either side (very narrow screens), center it under/over the hotspot.
+    if(left < MARGIN){
+      left = Math.min(Math.max(hRect.left + hRect.width/2 - cw/2, MARGIN), vw - cw - MARGIN);
+    }
+
+    // Vertically center on the hotspot, then clamp fully inside the viewport.
+    let top = hRect.top + hRect.height/2 - ch/2;
+    top = Math.min(Math.max(top, MARGIN), vh - ch - MARGIN);
+    left = Math.min(Math.max(left, MARGIN), vw - cw - MARGIN);
+
+    card.style.left = left + 'px';
+    card.style.top = top + 'px';
+  }
+
+  hotspots.forEach(h=>{
+    h.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      const id = h.dataset.card;
+      const card = document.getElementById(id);
+      const isOpen = card.classList.contains('show');
+      closeAll();
+      if(!isOpen){
+        // measure while invisible-but-rendered to get accurate size, then position, then show
+        card.style.transition = 'none';
+        card.classList.add('show');
+        card.style.opacity = '0';
+        positionCard(card, h);
+        void card.offsetWidth;
+        card.style.opacity = '';
+        card.style.transition = '';
+        h.classList.add('active');
+      }
+    });
+  });
+
+  cards.forEach(c=>{
+    c.querySelector('.close').addEventListener('click', (e)=>{
+      e.stopPropagation();
+      closeAll();
+    });
+    c.addEventListener('click', (e)=> e.stopPropagation());
+  });
+
+  document.addEventListener('click', closeAll);
+  window.addEventListener('resize', closeAll);
+</script>
 
 </body>
 </html>
