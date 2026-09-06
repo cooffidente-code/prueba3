@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Redes — Emiliano Pineda Tuluminati</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0e14;
+    --panel:#12181f;
+    --panel2:#0d1218;
+    --border:#2a333d;
+    --border-bright:#4a5866;
+    --text:#E8E8E8;
+    --dim:#7C8494;
+    --lime:#C6FF3D;
+    --magenta:#FF3DAE;
+    --amber:#FFB400;
+    --cyan:#3DE0FF;
+  }
+  *{ box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+  html,body{ min-height:100%; }
+  body{
+    background: radial-gradient(ellipse 120% 90% at 50% 0%, #101825 0%, #0a0e14 55%, #060809 100%);
+    color:var(--text);
+    font-family:'JetBrains Mono', monospace;
+    position:relative;
+    overflow-x:hidden;
+    padding-bottom:90px;
+  }
+  .pixel{ font-family:'Press Start 2P', monospace; }
+  a{ color:inherit; text-decoration:none; }
+
+  .grid-bg{
+    position:fixed; inset:0; z-index:0;
+    background-image:
+      linear-gradient(rgba(198,255,61,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(198,255,61,0.03) 1px, transparent 1px);
+    background-size:40px 40px;
+    mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black 20%, transparent 70%);
+    animation: driftbg 22s ease-in-out infinite;
+  }
+  @keyframes driftbg{ 0%,100%{ background-position:0px 0px; } 50%{ background-position:14px -10px; } }
+  @media (prefers-reduced-motion: reduce){ .grid-bg{ animation:none; } }
+
+  .topbar{
+    position:relative; z-index:2; display:flex; align-items:center; justify-content:space-between;
+    padding:20px 6vw; border-bottom:1px solid var(--border);
+  }
+  .back-link{
+    display:flex; align-items:center; gap:8px; font-size:0.7rem; color:var(--dim);
+    border:1px solid var(--border-bright); padding:8px 12px; transition:color .2s, border-color .2s;
+  }
+  .back-link:hover{ color:var(--lime); border-color:var(--lime); }
+  .brand-mini{ font-size:0.62rem; color:var(--dim); letter-spacing:0.05em; }
+  .brand-mini .blink{ display:inline-block; width:6px; height:11px; background:var(--lime); margin-left:4px; animation:blink 1s steps(1) infinite; vertical-align:middle;}
+  @keyframes blink{ 50%{ opacity:0; } }
+
+  .page-head{ position:relative; z-index:2; padding:56px 6vw 40px; max-width:820px; }
+  .eyebrow{ font-size:0.65rem; color:var(--cyan); letter-spacing:0.1em; margin-bottom:14px; display:flex; align-items:center; gap:8px;}
+  .eyebrow .dot{ width:6px; height:6px; border-radius:50%; background:var(--cyan); }
+  .page-title{ font-size:clamp(2rem,6vw,3rem); line-height:1.1; margin-bottom:16px; }
+  .page-lede{ font-size:0.95rem; color:var(--dim); line-height:1.6; max-width:520px; }
+
+  .links-wrap{ position:relative; z-index:2; padding:0 6vw; max-width:640px; margin:0 auto; display:flex; flex-direction:column; gap:12px; }
+
+  .link-row{
+    display:flex; align-items:center; gap:16px; padding:18px 20px; border:1px solid var(--border);
+    background:var(--panel); transition:border-color .2s ease, transform .2s ease;
+  }
+  .link-row:hover{ transform:translateX(6px); }
+
+  .link-icon{
+    width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    flex-shrink:0; border:1px solid var(--border-bright);
+  }
+  .link-icon svg{ width:19px; height:19px; }
+
+  .link-row.fb{ } .link-row.fb:hover{ border-color:#5B8DEF; } .link-row.fb .link-icon{ color:#5B8DEF; }
+  .link-row.ig:hover{ border-color:var(--magenta); } .link-row.ig .link-icon{ color:var(--magenta); }
+  .link-row.tt:hover{ border-color:var(--lime); } .link-row.tt .link-icon{ color:var(--lime); }
+  .link-row.yt:hover{ border-color:#FF4B4B; } .link-row.yt .link-icon{ color:#FF4B4B; }
+  .link-row.sp:hover{ border-color:#1DB954; } .link-row.sp .link-icon{ color:#1DB954; }
+
+  .link-info{ flex:1; }
+  .link-platform{ font-size:0.62rem; color:var(--dim); letter-spacing:0.08em; margin-bottom:3px; }
+  .link-handle{ font-size:0.88rem; }
+  .link-arrow{ color:var(--dim); font-size:0.9rem; }
+  .link-row:hover .link-arrow{ color:var(--lime); }
+
+  .footnote{
+    max-width:640px; margin:50px auto 0; padding:0 6vw; font-size:0.68rem; color:var(--dim); text-align:center;
+  }
+</style>
+</head>
+<body>
+
+<div class="grid-bg"></div>
+
+<div class="topbar">
+  <a href="index.html" class="back-link">← Volver</a>
+  <div class="brand-mini pixel">TULUMINATI<span class="blink"></span></div>
+</div>
+
+<div class="page-head">
+  <div class="eyebrow"><span class="dot"></span>REDES</div>
+  <h1 class="page-title">Sígueme donde quieras.</h1>
+  <p class="page-lede">Todas mis plataformas en un solo lugar, para que no andes buscando por separado.</p>
+</div>
+
+<div class="links-wrap">
+
+  <a class="link-row fb" href="https://www.facebook.com/emilianopineda.tuluminati/" target="_blank" rel="noopener">
+    <div class="link-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13.5 21v-7.5h2.5l.4-3H13.5V8.5c0-.87.24-1.46 1.5-1.46h1.6V4.34C16.3 4.24 15.32 4.15 14.2 4.15c-2.35 0-3.95 1.43-3.95 4.06V10.5H7.75v3H10.25V21h3.25z"/></svg></div>
+    <div class="link-info">
+      <div class="link-platform">FACEBOOK · PÁGINA</div>
+      <div class="link-handle">Emiliano Pineda Tuluminati</div>
+    </div>
+    <div class="link-arrow">→</div>
+  </a>
+
+  <a class="link-row fb" href="https://www.facebook.com/profile.php?id=61579515620990" target="_blank" rel="noopener">
+    <div class="link-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13.5 21v-7.5h2.5l.4-3H13.5V8.5c0-.87.24-1.46 1.5-1.46h1.6V4.34C16.3 4.24 15.32 4.15 14.2 4.15c-2.35 0-3.95 1.43-3.95 4.06V10.5H7.75v3H10.25V21h3.25z"/></svg></div>
+    <div class="link-info">
+      <div class="link-platform">FACEBOOK · PERFIL</div>
+      <div class="link-handle">Perfil personal</div>
+    </div>
+    <div class="link-arrow">→</div>
+  </a>
+
+  <a class="link-row ig" href="https://www.instagram.com/emilianopineda.mx/" target="_blank" rel="noopener">
+    <div class="link-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="0.8" fill="currentColor" stroke="none"/></svg></div>
+    <div class="link-info">
+      <div class="link-platform">INSTAGRAM</div>
+      <div class="link-handle">@emilianopineda.mx</div>
+    </div>
+    <div class="link-arrow">→</div>
+  </a>
+
+  <a class="link-row tt" href="https://www.tiktok.com/@los.tuluminatis.podcast" target="_blank" rel="noopener">
+    <div class="link-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M16.6 5.82s.51.5 0 0A4.278 4.278 0 0 1 15.54 3h-3.09v12.4a2.592 2.592 0 0 1-2.59 2.5c-1.42 0-2.6-1.16-2.6-2.6 0-1.72 1.66-3.01 3.37-2.48V9.66c-3.45-.46-6.47 2.22-6.47 5.64 0 3.33 2.76 5.7 5.69 5.7 3.14 0 5.69-2.55 5.69-5.7V9.01a7.35 7.35 0 0 0 4.3 1.38V7.3s-1.88.09-3.24-1.48z"/></svg></div>
+    <div class="link-info">
+      <div class="link-platform">TIKTOK · PODCAST</div>
+      <div class="link-handle">@los.tuluminatis.podcast</div>
+    </div>
+    <div class="link-arrow">→</div>
+  </a>
+
+  <a class="link-row tt" href="https://www.tiktok.com/@emilianopinedatuluminati" target="_blank" rel="noopener">
+    <div class="link-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M16.6 5.82s.51.5 0 0A4.278 4.278 0 0 1 15.54 3h-3.09v12.4a2.592 2.592 0 0 1-2.59 2.5c-1.42 0-2.6-1.16-2.6-2.6 0-1.72 1.66-3.01 3.37-2.48V9.66c-3.45-.46-6.47 2.22-6.47 5.64 0 3.33 2.76 5.7 5.69 5.7 3.14 0 5.69-2.55 5.69-5.7V9.01a7.35 7.35 0 0 0 4.3 1.38V7.3s-1.88.09-3.24-1.48z"/></svg></div>
+    <div class="link-info">
+      <div class="link-platform">TIKTOK · PERSONAL</div>
+      <div class="link-handle">@emilianopinedatuluminati</div>
+    </div>
+    <div class="link-arrow">→</div>
+  </a>
+
+  <a class="link-row yt" href="https://www.youtube.com/@EmilianoPineda_mx" target="_blank" rel="noopener">
+    <div class="link-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M21.6 7.2s-.2-1.5-.8-2.1c-.8-.8-1.7-.8-2.1-.9C15.9 4 12 4 12 4s-3.9 0-6.7.2c-.4 0-1.3.1-2.1.9-.6.6-.8 2.1-.8 2.1S2.2 9 2.2 10.7v1.6c0 1.8.2 3.5.2 3.5s.2 1.5.8 2.1c.8.8 1.9.8 2.4.9C7.4 19 12 19 12 19s3.9 0 6.7-.2c.4 0 1.3-.1 2.1-.9.6-.6.8-2.1.8-2.1s.2-1.8.2-3.5v-1.6c0-1.8-.2-3.5-.2-3.5zM9.9 14.6V8.9l5.4 2.9-5.4 2.8z"/></svg></div>
+    <div class="link-info">
+      <div class="link-platform">YOUTUBE</div>
+      <div class="link-handle">@EmilianoPineda_mx</div>
+    </div>
+    <div class="link-arrow">→</div>
+  </a>
+
+  <a class="link-row sp" href="https://open.spotify.com/intl-es/artist/6l6SUVtiaLbCM9CQcQfNbg" target="_blank" rel="noopener">
+    <div class="link-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm4.6 14.4a.6.6 0 0 1-.83.2c-2.27-1.39-5.13-1.7-8.5-.93a.6.6 0 1 1-.27-1.17c3.68-.84 6.84-.48 9.4 1.08.28.17.37.54.2.82zm1.22-2.72a.75.75 0 0 1-1.03.25c-2.6-1.6-6.56-2.06-9.63-1.13a.75.75 0 1 1-.44-1.44c3.52-1.07 7.88-.55 10.86 1.28.35.22.46.68.24 1.04zm.1-2.83C14.9 8.9 9.9 8.7 6.9 9.66a.9.9 0 1 1-.55-1.72c3.45-1.1 9.05-.87 12.6 1.28a.9.9 0 1 1-.93 1.53z"/></svg></div>
+    <div class="link-info">
+      <div class="link-platform">SPOTIFY</div>
+      <div class="link-handle">Perfil de artista</div>
+    </div>
+    <div class="link-arrow">→</div>
+  </a>
+
+</div>
+
+<div class="footnote">Toca cualquiera para abrir en pestaña nueva.</div>
+
+</body>
+</html>
