@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Repara la Calle — Emiliano Pineda Tuluminati</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0e14; --panel:#12181f; --border:#2a333d; --border-bright:#4a5866;
+    --text:#E8E8E8; --dim:#7C8494; --lime:#C6FF3D; --magenta:#FF3DAE; --amber:#FFB400; --cyan:#3DE0FF;
+  }
+  *{
+    box-sizing:border-box; margin:0; padding:0;
+    -webkit-tap-highlight-color:transparent;
+    user-select:none; -webkit-user-select:none; -ms-user-select:none;
+    -webkit-touch-callout:none;
+  }
+  html,body{ height:100%; }
+  body{
+    background: radial-gradient(ellipse 120% 90% at 50% 0%, #101825 0%, #0a0e14 55%, #060809 100%);
+    color:var(--text); font-family:'JetBrains Mono', monospace;
+    display:flex; flex-direction:column; align-items:center;
+    padding:20px 16px 30px; overflow-x:hidden;
+  }
+  .pixel{ font-family:'Press Start 2P', monospace; }
+  a{ color:inherit; text-decoration:none; }
+
+  .topbar{ width:100%; max-width:420px; display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; }
+  .back-link{
+    display:flex; align-items:center; gap:8px; font-size:0.68rem; color:var(--dim);
+    border:1px solid var(--border-bright); padding:8px 12px; transition:color .2s, border-color .2s; cursor:pointer;
+    background:none;
+  }
+  .back-link:hover{ color:var(--lime); border-color:var(--lime); }
+  .brand-mini{ font-size:0.58rem; color:var(--dim); }
+
+  .title-block{ text-align:center; margin-bottom:14px; }
+  .title-block h1{ font-size:clamp(1.1rem,4vw,1.5rem); margin-bottom:8px; }
+  .title-block p{ font-size:0.72rem; color:var(--dim); max-width:340px; margin:0 auto; line-height:1.5; }
+
+  .game-shell{ position:relative; width:100%; max-width:340px; }
+  .canvas-frame{
+    position:relative; border:2px solid var(--border-bright); background:#1a1a1a;
+    box-shadow:0 20px 50px rgba(0,0,0,0.5);
+  }
+  canvas{
+    display:block; width:100%; height:auto;
+    image-rendering:pixelated; image-rendering:-moz-crisp-edges; image-rendering:crisp-edges;
+  }
+
+  .hud{
+    position:absolute; top:8px; left:8px; right:8px; display:flex; justify-content:space-between;
+    font-family:'Press Start 2P',monospace; font-size:0.5rem; color:var(--lime); z-index:3; pointer-events:none;
+    text-shadow:1px 1px 0 #000;
+  }
+
+  .overlay{
+    position:absolute; inset:0; z-index:5; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    background:rgba(6,8,10,0.88); text-align:center; padding:20px; gap:14px;
+  }
+  .overlay.hidden{ display:none; }
+  #overlayWin, #overlayRoomWin{ background:rgba(6,8,10,0.32); }
+  .overlay h2{ font-family:'Press Start 2P',monospace; font-size:1rem; color:var(--lime); line-height:1.6; }
+  .overlay h2.lose{ color:var(--magenta); }
+  .overlay p{ font-size:0.72rem; color:var(--dim); line-height:1.6; max-width:260px; }
+  .overlay button{
+    font-family:'JetBrains Mono',monospace; font-weight:700; font-size:0.72rem; letter-spacing:0.04em;
+    background:var(--lime); color:#0a0e14; border:none; padding:12px 22px; cursor:pointer; margin-top:4px;
+  }
+  .overlay button:hover{ background:#d8ff70; }
+  .overlay button.secondary{ background:transparent; color:var(--dim); border:1px solid var(--border-bright); }
+  .overlay button.secondary:hover{ color:var(--text); border-color:var(--text); }
+
+  .controls{
+    display:flex; align-items:center; justify-content:space-between; margin-top:18px; width:100%; max-width:340px;
+  }
+  .dpad{ display:grid; grid-template-columns:58px 58px 58px; grid-template-rows:58px 58px 58px; gap:6px; }
+  .dpad button{
+    background:var(--panel); border:1px solid var(--border-bright); color:var(--lime);
+    font-size:1.4rem; display:flex; align-items:center; justify-content:center; cursor:pointer;
+    touch-action:none; -webkit-touch-callout:none; -webkit-user-select:none; user-select:none;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .dpad button:active{ background:var(--lime); color:#0a0e14; }
+  .dpad .up{ grid-column:2; grid-row:1; }
+  .dpad .left{ grid-column:1; grid-row:2; }
+  .dpad .down{ grid-column:2; grid-row:2; }
+  .dpad .right{ grid-column:3; grid-row:2; }
+
+  .kb-hint{ font-size:0.62rem; color:var(--dim); text-align:right; line-height:1.6; }
+  .kb-hint b{ color:var(--text); }
+
+  @media (min-width:640px){
+    .controls .dpad{ display:none; }
+    .kb-hint{ width:100%; text-align:center; }
+  }
+
+  /* ---------- menu screens ---------- */
+  .screen{ width:100%; max-width:340px; display:flex; flex-direction:column; gap:14px; align-items:stretch; }
+  .screen.hidden{ display:none; }
+
+  .menu-btn{
+    font-family:'JetBrains Mono',monospace; font-weight:700; font-size:0.85rem; letter-spacing:0.03em;
+    background:var(--panel); color:var(--text); border:1px solid var(--border-bright);
+    padding:20px 16px; cursor:pointer; display:flex; align-items:center; justify-content:space-between;
+    transition:border-color .2s ease, transform .15s ease;
+  }
+  .menu-btn:hover{ border-color:var(--lime); transform:translateX(4px); }
+  .menu-btn .sub{ display:block; font-family:'JetBrains Mono',monospace; font-weight:400; font-size:0.62rem; color:var(--dim); margin-top:4px; }
+  .menu-btn .arrow{ color:var(--lime); font-size:1rem; }
+
+  .field-label{ font-size:0.65rem; color:var(--dim); letter-spacing:0.05em; margin-bottom:6px; display:block; }
+  .field-input{
+    width:100%; background:var(--panel2,#0d1218); border:1px solid var(--border-bright); color:var(--text);
+    font-family:'JetBrains Mono',monospace; font-size:0.95rem; padding:14px; letter-spacing:0.05em;
+    text-transform:uppercase;
+  }
+  .field-input:focus{ outline:none; border-color:var(--lime); }
+  .field-row{ margin-bottom:16px; }
+  .field-error{ font-size:0.65rem; color:var(--magenta); min-height:1em; margin-top:6px; }
+
+  .room-list{ display:flex; flex-direction:column; gap:8px; max-height:260px; overflow-y:auto; }
+  .room-row{
+    display:flex; align-items:center; justify-content:space-between; padding:14px; border:1px solid var(--border-bright);
+    background:var(--panel); cursor:pointer; transition:border-color .2s;
+  }
+  .room-row:hover{ border-color:var(--lime); }
+  .room-row .rname{ font-size:0.82rem; }
+  .room-row .rcount{ font-size:0.65rem; color:var(--dim); }
+  .room-row.full{ opacity:0.45; pointer-events:none; }
+  .empty-note{ font-size:0.7rem; color:var(--dim); text-align:center; padding:20px 10px; }
+
+  .loading-note{ font-size:0.7rem; color:var(--dim); text-align:center; padding:10px; }
+
+  .players-strip{
+    display:flex; gap:6px; flex-wrap:wrap; padding:0 6px; font-size:0.6rem; color:var(--dim);
+  }
+  .players-strip span.pdot{ width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:4px; vertical-align:middle; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <button id="topBack" class="back-link">← Volver</button>
+  <div class="brand-mini pixel">TULUMINATI</div>
+</div>
+
+<div class="title-block">
+  <h1 class="pixel">REPARA LA CALLE</h1>
+  <p id="titleSub">Mueve a Emiliano a los baches para arreglarlos automáticamente. Esquiva los carros — ¡repara 5 para ganar!</p>
+</div>
+
+<!-- ===== SCREEN: main mode menu ===== -->
+<div class="screen" id="screenMenu">
+  <div class="menu-btn" id="btnMode1p">
+    <div>1 JUGADOR<span class="sub">Juega solo, local</span></div>
+    <div class="arrow">→</div>
+  </div>
+  <div class="menu-btn" id="btnMode2p">
+    <div>2 JUGADORES ONLINE<span class="sub">Hasta 10 personas en una sala</span></div>
+    <div class="arrow">→</div>
+  </div>
+</div>
+
+<!-- ===== SCREEN: online create/join choice ===== -->
+<div class="screen hidden" id="screenOnlineMenu">
+  <div class="menu-btn" id="btnCreateRoom">
+    <div>CREAR SALA<span class="sub">Tú pones el nombre y el código</span></div>
+    <div class="arrow">→</div>
+  </div>
+  <div class="menu-btn" id="btnJoinRoom">
+    <div>UNIRSE A SALA<span class="sub">Ver salas activas</span></div>
+    <div class="arrow">→</div>
+  </div>
+</div>
+
+<!-- ===== SCREEN: create room form ===== -->
+<div class="screen hidden" id="screenCreate">
+  <div class="field-row">
+    <label class="field-label">NOMBRE DE LA SALA (máx. 8 caracteres)</label>
+    <input class="field-input" id="inputRoomName" maxlength="8" placeholder="EJ: TULUM01">
+  </div>
+  <div class="field-row">
+    <label class="field-label">CÓDIGO DE ACCESO (2 dígitos)</label>
+    <input class="field-input" id="inputRoomCode" maxlength="2" inputmode="numeric" placeholder="42">
+  </div>
+  <div class="field-error" id="createError"></div>
+  <div class="menu-btn" id="btnConfirmCreate">
+    <div>CREAR Y ENTRAR</div>
+    <div class="arrow">→</div>
+  </div>
+</div>
+
+<!-- ===== SCREEN: room list to join ===== -->
+<div class="screen hidden" id="screenRoomList">
+  <div class="room-list" id="roomListEl">
+    <div class="loading-note">Buscando salas activas…</div>
+  </div>
+</div>
+
+<!-- ===== SCREEN: enter code to join ===== -->
+<div class="screen hidden" id="screenJoinCode">
+  <div class="field-row">
+    <label class="field-label" id="joinRoomLabel">CÓDIGO DE ACCESO</label>
+    <input class="field-input" id="inputJoinCode" maxlength="2" inputmode="numeric" placeholder="42">
+  </div>
+  <div class="field-error" id="joinError"></div>
+  <div class="menu-btn" id="btnConfirmJoin">
+    <div>ENTRAR A LA SALA</div>
+    <div class="arrow">→</div>
+  </div>
+</div>
+
+<!-- ===== SCREEN: the game itself (single or multiplayer) ===== -->
+<div class="screen hidden" id="screenGame" style="align-items:center;">
+  <div class="players-strip" id="playersStrip"></div>
+  <div class="game-shell">
+    <div class="canvas-frame">
+      <canvas id="game" width="160" height="240"></canvas>
+      <div class="hud">
+        <span id="hudScore">BACHES: 0/5</span>
+        <span id="hudStatus"></span>
+      </div>
+
+      <div class="overlay hidden" id="overlayStart">
+        <h2 class="pixel">LISTO?</h2>
+        <p>Flechas / WASD en PC.<br>Botones táctiles en celular.<br>Empiezas seguro en la banqueta.</p>
+        <button id="btnStart">JUGAR</button>
+      </div>
+
+      <div class="overlay hidden" id="overlayLose">
+        <h2 class="pixel lose">GAME OVER</h2>
+        <p id="loseText">Te atropelló un carro.</p>
+        <button id="btnRetry">REINTENTAR</button>
+        <button class="secondary" id="btnLoseMenu">MENÚ PRINCIPAL</button>
+      </div>
+
+      <div class="overlay hidden" id="overlayWin">
+        <h2 class="pixel">¡GANASTE!</h2>
+        <p>Reparaste los 5 baches. La calle te debe una.</p>
+        <button id="btnAgain">JUGAR OTRA VEZ</button>
+        <button class="secondary" id="btnWinMenu">MENÚ PRINCIPAL</button>
+      </div>
+
+      <div class="overlay hidden" id="overlayRoomWin">
+        <h2 class="pixel">¡LA SALA GANÓ!</h2>
+        <p>Entre todos repararon 5 baches. 🎉</p>
+        <button id="btnRoomWinMenu">MENÚ PRINCIPAL</button>
+      </div>
+    </div>
+
+    <div class="controls">
+      <div class="dpad">
+        <button class="up" data-dir="up">▲</button>
+        <button class="left" data-dir="left">◀</button>
+        <button class="down" data-dir="down">▼</button>
+        <button class="right" data-dir="right">▶</button>
+      </div>
+      <div class="kb-hint">Usa <b>flechas</b><br>o <b>WASD</b></div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {
+  getDatabase, ref, set, update, get, push, onValue, off,
+  runTransaction, onDisconnect, remove, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDMyBJGP481qjbSQC3MS-g5r3RF1SWQBLc",
+  authDomain: "juego-tuluminatis-1.firebaseapp.com",
+  databaseURL: "https://juego-tuluminatis-1-default-rtdb.firebaseio.com",
+  projectId: "juego-tuluminatis-1",
+  storageBucket: "juego-tuluminatis-1.firebasestorage.app",
+  messagingSenderId: "88704024011",
+  appId: "1:88704024011:web:0fa61877bf5d7a58ca8a4e"
+};
+const fbApp = initializeApp(firebaseConfig);
+const db = getDatabase(fbApp);
+
+const PLAYER_COLORS = ['#C6FF3D','#FF3DAE','#3DE0FF','#FFB400','#8A5CFF','#FF6B4A','#4AF7A8','#F5E663','#B5B8FF','#FF9ED2'];
+
+/* ============================================================
+   SCREEN NAVIGATION
+   ============================================================ */
+const screens = {
+  menu: document.getElementById('screenMenu'),
+  onlineMenu: document.getElementById('screenOnlineMenu'),
+  create: document.getElementById('screenCreate'),
+  roomList: document.getElementById('screenRoomList'),
+  joinCode: document.getElementById('screenJoinCode'),
+  game: document.getElementById('screenGame'),
+};
+let currentScreen = 'menu';
+let navStack = [];
+
+function showScreen(name, opts){
+  opts = opts || {};
+  if(!opts.isBack) navStack.push(currentScreen);
+  Object.values(screens).forEach(s=> s.classList.add('hidden'));
+  screens[name].classList.remove('hidden');
+  currentScreen = name;
+  document.getElementById('titleSub').style.display = (name === 'game') ? 'none' : '';
+}
+
+document.getElementById('topBack').addEventListener('click', ()=>{
+  if(currentScreen === 'game'){
+    leaveCurrentGame();
+    navStack = [];
+    showScreen('menu', {isBack:true});
+    return;
+  }
+  const prev = navStack.pop();
+  if(prev){ Object.values(screens).forEach(s=> s.classList.add('hidden')); screens[prev].classList.remove('hidden'); currentScreen = prev; }
+  else { window.location.href = 'index.html'; }
+});
+
+/* ============================================================
+   SHARED GAME ENGINE (canvas, drawing, physics helpers)
+   ============================================================ */
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+ctx.imageSmoothingEnabled = false;
+const W = canvas.width, H = canvas.height;
+const CAR_LANES = 5;
+const TOTAL_ROWS = 6;
+const rowH = H / TOTAL_ROWS;
+const SIDEWALK_ROW = 5;
+const PLAYER_SPEED = 82; // px/sec — real-time based, same feel on every device
+
+const COLORS = {
+  road:'#1c1f22', roadAlt:'#20242a', laneLine:'#3a4048',
+  sidewalk:'#5a5f66', sidewalkLine:'#484d54',
+  pothole:'#050607', potholeCrack:'#3a2f1a',
+  patch:'#141618', patchFlash:'#e8ffb0',
+  skin:'#e8c99a', hair:'#2a1e14', shirt:'#111214', pants:'#0d0e10', shoe:'#f4f4f4',
+  carBody:['#FF3DAE','#FFB400','#3DE0FF','#8A5CFF'],
+};
+
+function rowCenterY(i){ return i*rowH + rowH/2; }
+function rectsOverlap(a,b){ return a.x<b.x+b.w && a.x+a.w>b.x && a.y<b.y+b.h && a.y+a.h>b.y; }
+
+let audioCtx = null;
+function getAudioCtx(){ if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)(); return audioCtx; }
+function playRepairSound(){
+  try{
+    const ctxA = getAudioCtx(); const now = ctxA.currentTime;
+    [880,1320].forEach((freq,i)=>{
+      const osc=ctxA.createOscillator(), gain=ctxA.createGain();
+      osc.type='square'; osc.frequency.value=freq;
+      gain.gain.setValueAtTime(0.08, now+i*0.07);
+      gain.gain.exponentialRampToValueAtTime(0.001, now+i*0.07+0.12);
+      osc.connect(gain).connect(ctxA.destination);
+      osc.start(now+i*0.07); osc.stop(now+i*0.07+0.13);
+    });
+  }catch(e){}
+}
+let musicTimeoutId=null, musicStopped=true;
+function stopVictoryMusic(){ musicStopped=true; if(musicTimeoutId){clearTimeout(musicTimeoutId); musicTimeoutId=null;} }
+function playVictoryMusic(){
+  musicStopped=false;
+  const melody=[{f:523.25,d:170},{f:659.25,d:170},{f:784.00,d:170},{f:659.25,d:130},
+    {f:523.25,d:170},{f:784.00,d:170},{f:880.00,d:210},{f:784.00,d:240},
+    {f:659.25,d:150},{f:784.00,d:150},{f:988.00,d:210},{f:880.00,d:280}];
+  const bass=[130.81,164.81,196.00,164.81];
+  let idx=0;
+  function playNote(){
+    if(musicStopped) return;
+    const note=melody[idx%melody.length];
+    try{
+      const ctxA=getAudioCtx(); const now=ctxA.currentTime;
+      const osc=ctxA.createOscillator(), gain=ctxA.createGain();
+      osc.type='triangle'; osc.frequency.value=note.f;
+      gain.gain.setValueAtTime(0.0001,now); gain.gain.linearRampToValueAtTime(0.07,now+0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001,now+note.d/1000);
+      osc.connect(gain).connect(ctxA.destination); osc.start(now); osc.stop(now+note.d/1000+0.03);
+      if(idx%3===0){
+        const bOsc=ctxA.createOscillator(), bGain=ctxA.createGain();
+        bOsc.type='square'; bOsc.frequency.value=bass[(idx/3)%bass.length];
+        bGain.gain.setValueAtTime(0.001,now); bGain.gain.linearRampToValueAtTime(0.045,now+0.02);
+        bGain.gain.exponentialRampToValueAtTime(0.001,now+0.3);
+        bOsc.connect(bGain).connect(ctxA.destination); bOsc.start(now); bOsc.stop(now+0.32);
+      }
+    }catch(e){}
+    idx++; musicTimeoutId=setTimeout(playNote, note.d+30);
+  }
+  playNote();
+}
+
+function drawPixelPlayer(x,y,frame,facing,markerColor){
+  const footOffset = frame===0?0:1;
+  ctx.fillStyle=COLORS.hair; ctx.fillRect(x+2,y,6,2);
+  ctx.fillStyle=COLORS.skin; ctx.fillRect(x+2,y+2,6,3);
+  ctx.fillStyle=COLORS.shirt; ctx.fillRect(x+2,y+5,6,4);
+  ctx.fillStyle=COLORS.skin; ctx.fillRect(x,y+5,2,4); ctx.fillRect(x+8,y+5,2,4);
+  ctx.fillStyle=COLORS.pants; ctx.fillRect(x+2,y+9,6,3);
+  ctx.fillStyle=COLORS.shoe;
+  if(footOffset===0){ ctx.fillRect(x+1,y+12,3,2); ctx.fillRect(x+6,y+12,3,2); }
+  else { ctx.fillRect(x+2,y+12,3,2); ctx.fillRect(x+5,y+12,3,2); }
+  if(markerColor){
+    ctx.fillStyle = markerColor;
+    ctx.fillRect(x+3, y-3, 4, 2);
+  }
+}
+function drawCar(car){
+  ctx.fillStyle=car.color; ctx.fillRect(car.x,car.y,car.w,car.h);
+  ctx.fillStyle='rgba(255,255,255,0.35)'; ctx.fillRect(car.x+3,car.y+2,car.w-6,car.h-6);
+  ctx.fillStyle='#0a0e14'; ctx.fillRect(car.x+2,car.y+car.h-2,4,2); ctx.fillRect(car.x+car.w-6,car.y+car.h-2,4,2);
+}
+function drawPothole(p){
+  ctx.fillStyle=COLORS.pothole; ctx.beginPath(); ctx.ellipse(p.x,p.y,p.r,p.r*0.7,0,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle=COLORS.potholeCrack; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(p.x-p.r*0.6,p.y-p.r*0.3); ctx.lineTo(p.x+p.r*0.5,p.y+p.r*0.4); ctx.stroke();
+}
+function drawPatch(p){
+  const t=p.flash||0;
+  if(t>0){ ctx.globalAlpha=0.4+t*0.6; ctx.fillStyle=COLORS.patchFlash; ctx.beginPath(); ctx.ellipse(p.x,p.y,p.r,p.r*0.7,0,0,Math.PI*2); ctx.fill(); ctx.globalAlpha=1; }
+  else { ctx.fillStyle=COLORS.patch; ctx.beginPath(); ctx.ellipse(p.x,p.y,p.r,p.r*0.7,0,0,Math.PI*2); ctx.fill(); }
+}
+function drawFloaters(floaters){
+  ctx.font='6px monospace'; ctx.textAlign='center';
+  floaters.forEach(f=>{ ctx.fillStyle=`rgba(198,255,61,${Math.max(0,f.life)})`; ctx.fillText('reparado', f.x, f.y); });
+  ctx.textAlign='left';
+}
+function drawRoadBase(){
+  for(let i=0;i<CAR_LANES;i++){ ctx.fillStyle = i%2===0?COLORS.road:COLORS.roadAlt; ctx.fillRect(0,i*rowH,W,rowH); }
+  ctx.fillStyle=COLORS.sidewalk; ctx.fillRect(0,SIDEWALK_ROW*rowH,W,rowH);
+  ctx.strokeStyle=COLORS.sidewalkLine; ctx.lineWidth=1;
+  for(let x=0;x<W;x+=10){ ctx.beginPath(); ctx.moveTo(x,SIDEWALK_ROW*rowH); ctx.lineTo(x,H); ctx.stroke(); }
+  ctx.strokeStyle=COLORS.laneLine; ctx.lineWidth=1; ctx.setLineDash([5,4]);
+  for(let i=1;i<CAR_LANES;i++){ ctx.beginPath(); ctx.moveTo(0,i*rowH); ctx.lineTo(W,i*rowH); ctx.stroke(); }
+  ctx.setLineDash([]);
+}
+function updateHud(repaired){ document.getElementById('hudScore').textContent = 'BACHES: '+repaired+'/5'; }
+
+/* ---- shared touch/keyboard input ---- */
+let dirs = { up:false, down:false, left:false, right:false };
+function resetAllDirs(){ dirs.up=dirs.down=dirs.left=dirs.right=false; }
+const keyMap = { ArrowUp:'up',ArrowDown:'down',ArrowLeft:'left',ArrowRight:'right', w:'up',s:'down',a:'left',d:'right', W:'up',S:'down',A:'left',D:'right' };
+window.addEventListener('keydown', e=>{ const d=keyMap[e.key]; if(d && currentScreen==='game'){ dirs[d]=true; e.preventDefault(); } });
+window.addEventListener('keyup', e=>{ const d=keyMap[e.key]; if(d){ dirs[d]=false; e.preventDefault(); } });
+document.querySelectorAll('.dpad button').forEach(btn=>{
+  const d=btn.dataset.dir;
+  const press=(e)=>{ e.preventDefault(); dirs[d]=true; };
+  const release=(e)=>{ if(e) e.preventDefault(); dirs[d]=false; };
+  btn.addEventListener('pointerdown',press); btn.addEventListener('pointerup',release);
+  btn.addEventListener('pointerleave',release); btn.addEventListener('pointercancel',release);
+  btn.addEventListener('touchstart',press,{passive:false}); btn.addEventListener('touchend',release,{passive:false});
+  btn.addEventListener('touchcancel',release,{passive:false});
+});
+['pointerup','pointercancel','touchend','touchcancel'].forEach(evt=> document.addEventListener(evt, resetAllDirs, {passive:true}));
+window.addEventListener('blur', resetAllDirs);
+
+/* ============================================================
+   MODE: SINGLE PLAYER
+   ============================================================ */
+const SP = {
+  player:{x:0,y:0,w:10,h:14,facing:'up'}, cars:[], potholes:[], patches:[], floaters:[],
+  repaired:0, walkTimer:0, walkFrame:0, state:'idle',
+  celebrate:{time:0,duration:2600,centerX:0,centerY:0,stars:[],wonShown:false},
+  returnTarget:{x:0,y:0}
+}; // single player state container — pre-filled so nothing crashes before spInit() runs
+function spInit(){
+  SP.player = { x: W/2-5, y: rowCenterY(SIDEWALK_ROW)-7, w:10, h:14, facing:'up' };
+  SP.laneDir = []; for(let i=0;i<CAR_LANES;i++) SP.laneDir.push(i%2===0?1:-1);
+  SP.cars = [];
+  for(let i=0;i<CAR_LANES;i++){ for(let c=0;c<2;c++) SP.cars.push(spSpawnCar(i,c,2)); }
+  SP.potholes = []; for(let i=0;i<3;i++) SP.potholes.push(spSpawnPothole());
+  SP.patches=[]; SP.floaters=[]; SP.repaired=0; SP.walkTimer=0; SP.walkFrame=0;
+  SP.state='playing'; SP.celebrate={time:0,duration:2600,centerX:0,centerY:0,stars:[],wonShown:false};
+  SP.returnTarget={x:0,y:0};
+  updateHud(0);
+}
+function spSpawnCar(laneIndex,seedIndex,total){
+  const dir=SP.laneDir[laneIndex], w=22,h=10, gap=W/total;
+  let x=seedIndex*gap+Math.random()*10; if(dir<0) x=W-x;
+  const speed=(30+Math.random()*30)*dir*(0.9+laneIndex*0.08);
+  return {lane:laneIndex,x,y:rowCenterY(laneIndex)-h/2,w,h,speed,color:COLORS.carBody[laneIndex%COLORS.carBody.length]};
+}
+function spSpawnPothole(){
+  const lane=Math.floor(Math.random()*CAR_LANES), r=6, x=r+Math.random()*(W-r*2);
+  return {x,y:rowCenterY(lane),r};
+}
+function spStartReturn(){ SP.state='returning'; SP.returnTarget={x:W/2-SP.player.w/2, y: rowCenterY(SIDEWALK_ROW)-SP.player.h/2}; }
+function spStartCelebration(){
+  SP.state='celebrate'; SP.celebrate.time=0; SP.celebrate.wonShown=false;
+  SP.celebrate.centerX=SP.player.x+SP.player.w/2; SP.celebrate.centerY=SP.player.y+SP.player.h/2;
+  SP.celebrate.stars=[];
+  for(let i=0;i<20;i++) SP.celebrate.stars.push({x:Math.random()*W,y:Math.random()*H,size:1+Math.random()*1.5,phase:Math.random()*Math.PI*2,color:Math.random()<0.5?'#ffffff':'#3DE0FF'});
+  playVictoryMusic();
+}
+function spUpdate(dt){
+  const dtSec=dt/1000;
+  if(SP.state==='returning'){
+    const dx=SP.returnTarget.x-SP.player.x, dy=SP.returnTarget.y-SP.player.y, dist=Math.sqrt(dx*dx+dy*dy);
+    if(dist<1.5){ spStartCelebration(); return; }
+    const step=PLAYER_SPEED*dtSec;
+    SP.player.x+=(dx/dist)*step; SP.player.y+=(dy/dist)*step;
+    SP.player.facing = Math.abs(dx)>Math.abs(dy) ? (dx>0?'right':'left') : (dy>0?'down':'up');
+    SP.walkTimer+=dt; if(SP.walkTimer>160){SP.walkTimer=0; SP.walkFrame=SP.walkFrame===0?1:0;}
+    return;
+  }
+  if(SP.state==='celebrate'){
+    SP.celebrate.time+=dt;
+    if(!SP.celebrate.wonShown && SP.celebrate.time>=SP.celebrate.duration){ SP.celebrate.wonShown=true; document.getElementById('overlayWin').classList.remove('hidden'); }
+    return;
+  }
+  if(SP.state!=='playing') return;
+  let moving=false; const step=PLAYER_SPEED*dtSec;
+  if(dirs.up){SP.player.y-=step; SP.player.facing='up'; moving=true;}
+  if(dirs.down){SP.player.y+=step; SP.player.facing='down'; moving=true;}
+  if(dirs.left){SP.player.x-=step; SP.player.facing='left'; moving=true;}
+  if(dirs.right){SP.player.x+=step; SP.player.facing='right'; moving=true;}
+  SP.player.x=Math.max(0,Math.min(W-SP.player.w,SP.player.x));
+  SP.player.y=Math.max(0,Math.min(H-SP.player.h,SP.player.y));
+  if(moving){ SP.walkTimer+=dt; if(SP.walkTimer>160){SP.walkTimer=0; SP.walkFrame=SP.walkFrame===0?1:0;} } else { SP.walkFrame=0; SP.walkTimer=0; }
+  SP.cars.forEach(car=>{
+    car.x+=car.speed*dtSec;
+    if(car.speed>0 && car.x>W+30) car.x=-30-Math.random()*40;
+    if(car.speed<0 && car.x<-30) car.x=W+Math.random()*40;
+  });
+  const pbox={x:SP.player.x,y:SP.player.y,w:SP.player.w,h:SP.player.h};
+  for(const car of SP.cars){ if(rectsOverlap(pbox,car)){ spLose(); return; } }
+  for(let i=SP.potholes.length-1;i>=0;i--){
+    const p=SP.potholes[i]; const cx=SP.player.x+SP.player.w/2, cy=SP.player.y+SP.player.h/2;
+    const dx=cx-p.x, dy=cy-p.y;
+    if(Math.sqrt(dx*dx+dy*dy) < p.r+4){
+      SP.potholes.splice(i,1);
+      SP.patches.push({x:p.x,y:p.y,r:p.r,flash:1});
+      SP.floaters.push({x:p.x,y:p.y-6,life:1});
+      playRepairSound(); SP.repaired++; updateHud(SP.repaired);
+      if(SP.repaired>=5){ spStartReturn(); return; }
+      SP.potholes.push(spSpawnPothole());
+    }
+  }
+  SP.patches.forEach(p=>{ if(p.flash>0) p.flash=Math.max(0,p.flash-dt/400); });
+  for(let i=SP.floaters.length-1;i>=0;i--){ SP.floaters[i].y-=dt*0.03; SP.floaters[i].life-=dt/900; if(SP.floaters[i].life<=0) SP.floaters.splice(i,1); }
+}
+function spLose(){ SP.state='lose'; stopVictoryMusic(); document.getElementById('overlayLose').classList.remove('hidden'); }
+function spDrawCelebration(){
+  const progress=Math.min(1, SP.celebrate.time/SP.celebrate.duration);
+  ctx.fillStyle=`rgba(0,0,0,${0.7*progress})`; ctx.fillRect(0,0,W,H);
+  SP.celebrate.stars.forEach(s=>{
+    const tw=0.35+0.65*Math.abs(Math.sin(SP.celebrate.time/200+s.phase));
+    ctx.globalAlpha=tw*progress; ctx.fillStyle=s.color; ctx.fillRect(s.x,s.y,s.size,s.size);
+  });
+  ctx.globalAlpha=1;
+  const blinkDuration=550; let visible=true;
+  if(SP.celebrate.time<blinkDuration) visible = Math.floor(SP.celebrate.time/90)%2===0;
+  if(visible){
+    const growProgress=Math.min(1, SP.celebrate.time/(SP.celebrate.duration*0.65));
+    const eased=Math.pow(growProgress,0.55);
+    const scale=1+eased*(6.4-1);
+    const bounce=Math.sin(SP.celebrate.time/130)*5*eased;
+    const danceFrame=Math.floor(SP.celebrate.time/140)%2;
+    ctx.save();
+    ctx.translate(SP.celebrate.centerX, SP.celebrate.centerY-(SP.player.h/2)*(scale-1)+bounce);
+    ctx.scale(scale,scale);
+    drawPixelPlayer(-SP.player.w/2,-SP.player.h/2,danceFrame,SP.player.facing);
+    ctx.restore();
+  }
+}
+function spRender(){
+  drawRoadBase();
+  SP.patches.forEach(drawPatch); SP.potholes.forEach(drawPothole); SP.cars.forEach(drawCar);
+  if(SP.state==='celebrate') spDrawCelebration();
+  else drawPixelPlayer(SP.player.x,SP.player.y,SP.walkFrame,SP.player.facing);
+  drawFloaters(SP.floaters);
+}
+
+/* ============================================================
+   MODE: ONLINE MULTIPLAYER
+   ============================================================ */
+const MP = { roomId:null, playerId:null, color:null, listeners:[], pendingPotholes:new Set() };
+
+function mpGenPlayerId(){ return 'p_' + Math.random().toString(36).slice(2,10) + Date.now().toString(36); }
+
+function sanitizeRoomName(name){
+  return name.toUpperCase().replace(/[.#$\[\]\/\s]/g,'').slice(0,8);
+}
+
+async function mpCreateRoom(name, code){
+  const roomId = sanitizeRoomName(name);
+  if(!roomId){ return {ok:false, error:'Ponle un nombre válido a la sala.'}; }
+  if(!/^\d{2}$/.test(code)){ return {ok:false, error:'El código debe ser de 2 dígitos.'}; }
+  const roomRef = ref(db, `rooms/${roomId}`);
+  const existing = await get(roomRef);
+  if(existing.exists()){ return {ok:false, error:'Ese nombre de sala ya está en uso.'}; }
+
+  const potholes = {};
+  for(let i=0;i<3;i++){
+    const key = 'h'+i+'_'+Math.random().toString(36).slice(2,7);
+    potholes[key] = mpMakePothole();
+  }
+  await set(roomRef, {
+    code, createdAt: Date.now(), repaired: 0, potholes,
+    players: {}
+  });
+  return {ok:true, roomId};
+}
+
+function mpMakePothole(){
+  const lane = Math.floor(Math.random()*CAR_LANES);
+  return { lane, x: 6 + Math.random()*(W-12) };
+}
+
+async function mpListRooms(){
+  const snap = await get(ref(db, 'rooms'));
+  const out = [];
+  if(snap.exists()){
+    snap.forEach(child=>{
+      const val = child.val();
+      const count = val.players ? Object.keys(val.players).length : 0;
+      out.push({ id: child.key, count });
+    });
+  }
+  return out;
+}
+
+async function mpTryJoin(roomId, code){
+  const roomRef = ref(db, `rooms/${roomId}`);
+  const snap = await get(roomRef);
+  if(!snap.exists()) return {ok:false, error:'Esa sala ya no existe.'};
+  const val = snap.val();
+  if(String(val.code) !== String(code)) return {ok:false, error:'Código incorrecto.'};
+  const count = val.players ? Object.keys(val.players).length : 0;
+  if(count >= 10) return {ok:false, error:'Esa sala ya está llena (10/10).'};
+  return {ok:true};
+}
+
+function mpCleanupListeners(){
+  MP.listeners.forEach(({r,cb})=> off(r, 'value', cb));
+  MP.listeners = [];
+}
+
+function leaveCurrentGame(){
+  stopVictoryMusic();
+  if(MP.roomId && MP.playerId){
+    remove(ref(db, `rooms/${MP.roomId}/players/${MP.playerId}`)).catch(()=>{});
+  }
+  mpCleanupListeners();
+  MP.roomId = null; MP.playerId = null;
+  activeMode = null;
+}
+
+async function mpEnterRoom(roomId){
+  MP.roomId = roomId;
+  MP.playerId = mpGenPlayerId();
+  const snap = await get(ref(db, `rooms/${roomId}/players`));
+  const count = snap.exists() ? Object.keys(snap.val()).length : 0;
+  MP.color = PLAYER_COLORS[count % PLAYER_COLORS.length];
+
+  const meRef = ref(db, `rooms/${roomId}/players/${MP.playerId}`);
+  await set(meRef, { x: W/2-5, y: rowCenterY(SIDEWALK_ROW)-7, facing:'up', color: MP.color, updatedAt: Date.now() });
+  onDisconnect(meRef).remove();
+
+  mpInitLocal();
+  mpSubscribe();
+  showScreen('game');
+  document.getElementById('overlayStart').classList.remove('hidden');
+}
+
+const MPL = {
+  player:{x:0,y:0,w:10,h:14,facing:'up'}, otherPlayers:{}, potholes:{}, repaired:0,
+  patches:[], floaters:[], walkTimer:0, walkFrame:0, state:'idle', currentCars:[],
+  lastNetworkWrite:0, hitFlashTimer:0, roomStartTime:null, roomWinShown:false
+}; // local render/physics state for multiplayer — pre-filled so nothing crashes before mpInitLocal() runs
+function mpInitLocal(){
+  MPL.player = { x: W/2-5, y: rowCenterY(SIDEWALK_ROW)-7, w:10, h:14, facing:'up' };
+  MPL.otherPlayers = {};
+  MPL.potholes = {};
+  MPL.repaired = 0;
+  MPL.patches = []; MPL.floaters = [];
+  MPL.walkTimer = 0; MPL.walkFrame = 0;
+  MPL.state = 'playing';
+  MPL.lastNetworkWrite = 0;
+  MPL.hitFlashTimer = 0;
+  MPL.roomStartTime = null;
+  MPL.roomWinShown = false;
+}
+
+function mpSubscribe(){
+  const potR = ref(db, `rooms/${MP.roomId}/potholes`);
+  const potCb = (snap)=>{ MPL.potholes = snap.val() || {}; };
+  onValue(potR, potCb); MP.listeners.push({r:potR, cb:potCb});
+
+  const repR = ref(db, `rooms/${MP.roomId}/repaired`);
+  const repCb = (snap)=>{
+    MPL.repaired = snap.val() || 0;
+    updateHud(MPL.repaired);
+    if(MPL.repaired >= 5 && !MPL.roomWinShown){
+      MPL.roomWinShown = true;
+      MPL.state = 'roomwin';
+      document.getElementById('overlayRoomWin').classList.remove('hidden');
+      playVictoryMusic();
+    }
+  };
+  onValue(repR, repCb); MP.listeners.push({r:repR, cb:repCb});
+
+  const playersR = ref(db, `rooms/${MP.roomId}/players`);
+  const playersCb = (snap)=>{
+    const val = snap.val() || {};
+    const others = {};
+    let count = 0;
+    Object.keys(val).forEach(pid=>{
+      count++;
+      if(pid !== MP.playerId) others[pid] = val[pid];
+    });
+    MPL.otherPlayers = others;
+    renderPlayersStrip(val);
+  };
+  onValue(playersR, playersCb); MP.listeners.push({r:playersR, cb:playersCb});
+
+  const createdR = ref(db, `rooms/${MP.roomId}/createdAt`);
+  const createdCb = (snap)=>{ MPL.roomStartTime = snap.val() || Date.now(); };
+  onValue(createdR, createdCb); MP.listeners.push({r:createdR, cb:createdCb});
+}
+
+function renderPlayersStrip(playersObj){
+  const el = document.getElementById('playersStrip');
+  const entries = Object.keys(playersObj);
+  el.innerHTML = entries.map(pid=>{
+    const c = (playersObj[pid] && playersObj[pid].color) || '#888';
+    return `<span><span class="pdot" style="background:${c}"></span>${pid===MP.playerId?'Tú':'Jugador'}</span>`;
+  }).join(' ');
+}
+
+// deterministic car simulation shared by all clients (no network traffic needed)
+function mpCarsAt(elapsedSec){
+  const cars = [];
+  for(let lane=0; lane<CAR_LANES; lane++){
+    const dir = lane%2===0 ? 1 : -1;
+    const speed = (40 + lane*6) * dir;
+    const w=22, h=10;
+    for(let slot=0; slot<2; slot++){
+      const period = W + 60;
+      const startOffset = slot * (period/2);
+      let raw = startOffset + elapsedSec*speed;
+      let pos = ((raw % period) + period) % period - 30;
+      cars.push({ x: pos, y: rowCenterY(lane)-h/2, w, h, color: COLORS.carBody[lane%COLORS.carBody.length] });
+    }
+  }
+  return cars;
+}
+
+function mpUpdate(dt){
+  const dtSec = dt/1000;
+  if(MPL.state === 'roomwin'){ return; }
+  if(MPL.state !== 'playing') return;
+
+  let moving=false; const step=PLAYER_SPEED*dtSec;
+  if(dirs.up){MPL.player.y-=step; MPL.player.facing='up'; moving=true;}
+  if(dirs.down){MPL.player.y+=step; MPL.player.facing='down'; moving=true;}
+  if(dirs.left){MPL.player.x-=step; MPL.player.facing='left'; moving=true;}
+  if(dirs.right){MPL.player.x+=step; MPL.player.facing='right'; moving=true;}
+  MPL.player.x=Math.max(0,Math.min(W-MPL.player.w,MPL.player.x));
+  MPL.player.y=Math.max(0,Math.min(H-MPL.player.h,MPL.player.y));
+  if(moving){ MPL.walkTimer+=dt; if(MPL.walkTimer>160){MPL.walkTimer=0; MPL.walkFrame=MPL.walkFrame===0?1:0;} } else { MPL.walkFrame=0; MPL.walkTimer=0; }
+
+  // throttled network write of our own position
+  const now = performance.now();
+  if(now - MPL.lastNetworkWrite > 90 && MP.playerId){
+    MPL.lastNetworkWrite = now;
+    update(ref(db, `rooms/${MP.roomId}/players/${MP.playerId}`), {
+      x: MPL.player.x, y: MPL.player.y, facing: MPL.player.facing, color: MP.color, updatedAt: Date.now()
+    }).catch(()=>{});
+  }
+
+  // deterministic cars
+  const elapsed = MPL.roomStartTime ? (Date.now()-MPL.roomStartTime)/1000 : 0;
+  MPL.currentCars = mpCarsAt(elapsed);
+  const pbox = {x:MPL.player.x,y:MPL.player.y,w:MPL.player.w,h:MPL.player.h};
+  if(MPL.hitFlashTimer > 0){ MPL.hitFlashTimer -= dt; }
+  else {
+    for(const car of MPL.currentCars){
+      if(rectsOverlap(pbox, car)){ mpHandleHit(); break; }
+    }
+  }
+
+  // pothole collision -> claim via transaction
+  Object.keys(MPL.potholes).forEach(key=>{
+    if(MP.pendingPotholes.has(key)) return;
+    const p = MPL.potholes[key]; if(!p) return;
+    const px = p.x, py = rowCenterY(p.lane);
+    const cx = MPL.player.x+MPL.player.w/2, cy = MPL.player.y+MPL.player.h/2;
+    const dx = cx-px, dy = cy-py;
+    if(Math.sqrt(dx*dx+dy*dy) < 6+4){
+      MP.pendingPotholes.add(key);
+      const potRef = ref(db, `rooms/${MP.roomId}/potholes/${key}`);
+      runTransaction(potRef, current => current === null ? undefined : null).then(result=>{
+        MP.pendingPotholes.delete(key);
+        if(result.committed){
+          MPL.patches.push({x:px,y:py,r:6,flash:1});
+          MPL.floaters.push({x:px,y:py-6,life:1});
+          playRepairSound();
+          runTransaction(ref(db, `rooms/${MP.roomId}/repaired`), val => (val||0)+1).then(res=>{
+            const newVal = res.committed ? res.snapshot.val() : 0;
+            if(newVal < 5){
+              push(ref(db, `rooms/${MP.roomId}/potholes`), mpMakePothole());
+            }
+          });
+        }
+      }).catch(()=> MP.pendingPotholes.delete(key));
+    }
+  });
+
+  MPL.patches.forEach(p=>{ if(p.flash>0) p.flash=Math.max(0,p.flash-dt/400); });
+  for(let i=MPL.floaters.length-1;i>=0;i--){ MPL.floaters[i].y-=dt*0.03; MPL.floaters[i].life-=dt/900; if(MPL.floaters[i].life<=0) MPL.floaters.splice(i,1); }
+}
+
+function mpHandleHit(){
+  MPL.hitFlashTimer = 900;
+  MPL.player.x = W/2-5; MPL.player.y = rowCenterY(SIDEWALK_ROW)-7;
+  document.getElementById('hudStatus').textContent = '¡TE ATROPELLARON!';
+  setTimeout(()=>{ document.getElementById('hudStatus').textContent=''; }, 900);
+}
+
+function mpRender(){
+  drawRoadBase();
+  MPL.patches.forEach(drawPatch);
+  Object.keys(MPL.potholes).forEach(key=>{
+    const p = MPL.potholes[key]; if(!p) return;
+    drawPothole({x:p.x, y: rowCenterY(p.lane), r:6});
+  });
+  (MPL.currentCars || []).forEach(drawCar);
+  Object.keys(MPL.otherPlayers).forEach(pid=>{
+    const op = MPL.otherPlayers[pid];
+    if(!op) return;
+    drawPixelPlayer(op.x, op.y, 0, op.facing, op.color);
+  });
+  drawPixelPlayer(MPL.player.x, MPL.player.y, MPL.walkFrame, MPL.player.facing, MP.color);
+  drawFloaters(MPL.floaters);
+}
+
+/* ============================================================
+   MAIN LOOP — dispatches to whichever mode is active
+   ============================================================ */
+let activeMode = null; // 'single' | 'mp'
+let lastTime = performance.now();
+function loop(now){
+  const dt = Math.min(50, now-lastTime); lastTime = now;
+  if(activeMode === 'single'){ spUpdate(dt); spRender(); }
+  else if(activeMode === 'mp'){ mpUpdate(dt); mpRender(); }
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+/* ============================================================
+   UI WIRING
+   ============================================================ */
+function hideAllOverlays(){
+  ['overlayStart','overlayLose','overlayWin','overlayRoomWin'].forEach(id=> document.getElementById(id).classList.add('hidden'));
+}
+
+document.getElementById('btnMode1p').addEventListener('click', ()=>{
+  activeMode = 'single';
+  document.getElementById('playersStrip').innerHTML = '';
+  showScreen('game');
+  hideAllOverlays();
+  document.getElementById('overlayStart').classList.remove('hidden');
+});
+
+document.getElementById('btnMode2p').addEventListener('click', ()=> showScreen('onlineMenu'));
+
+document.getElementById('btnCreateRoom').addEventListener('click', ()=>{
+  document.getElementById('inputRoomName').value='';
+  document.getElementById('inputRoomCode').value='';
+  document.getElementById('createError').textContent='';
+  showScreen('create');
+});
+
+document.getElementById('inputRoomCode').addEventListener('input', (e)=>{
+  e.target.value = e.target.value.replace(/\D/g,'').slice(0,2);
+});
+document.getElementById('inputJoinCode').addEventListener('input', (e)=>{
+  e.target.value = e.target.value.replace(/\D/g,'').slice(0,2);
+});
+document.getElementById('inputRoomName').addEventListener('input', (e)=>{
+  e.target.value = sanitizeRoomName(e.target.value);
+});
+
+document.getElementById('btnConfirmCreate').addEventListener('click', async ()=>{
+  const name = document.getElementById('inputRoomName').value;
+  const code = document.getElementById('inputRoomCode').value;
+  const errEl = document.getElementById('createError');
+  errEl.textContent = 'Creando sala…';
+  const res = await mpCreateRoom(name, code);
+  if(!res.ok){ errEl.textContent = res.error; return; }
+  errEl.textContent = '';
+  activeMode = 'mp';
+  await mpEnterRoom(res.roomId);
+});
+
+let selectedRoomId = null;
+document.getElementById('btnJoinRoom').addEventListener('click', async ()=>{
+  showScreen('roomList');
+  const listEl = document.getElementById('roomListEl');
+  listEl.innerHTML = '<div class="loading-note">Buscando salas activas…</div>';
+  const rooms = await mpListRooms();
+  if(rooms.length === 0){
+    listEl.innerHTML = '<div class="empty-note">No hay salas activas ahorita.<br>¡Crea una para empezar!</div>';
+    return;
+  }
+  listEl.innerHTML = '';
+  rooms.forEach(r=>{
+    const row = document.createElement('div');
+    row.className = 'room-row' + (r.count>=10 ? ' full' : '');
+    row.innerHTML = `<span class="rname">${r.id}</span><span class="rcount">${r.count}/10 ${r.count>=10?'· LLENA':''}</span>`;
+    row.addEventListener('click', ()=>{
+      selectedRoomId = r.id;
+      document.getElementById('joinRoomLabel').textContent = `CÓDIGO PARA "${r.id}"`;
+      document.getElementById('inputJoinCode').value = '';
+      document.getElementById('joinError').textContent = '';
+      showScreen('joinCode');
+    });
+    listEl.appendChild(row);
+  });
+});
+
+document.getElementById('btnConfirmJoin').addEventListener('click', async ()=>{
+  const code = document.getElementById('inputJoinCode').value;
+  const errEl = document.getElementById('joinError');
+  errEl.textContent = 'Conectando…';
+  const res = await mpTryJoin(selectedRoomId, code);
+  if(!res.ok){ errEl.textContent = res.error; return; }
+  errEl.textContent = '';
+  activeMode = 'mp';
+  await mpEnterRoom(selectedRoomId);
+});
+
+document.getElementById('btnStart').addEventListener('click', ()=>{
+  hideAllOverlays();
+  if(activeMode === 'single') spInit();
+  else if(activeMode === 'mp') MPL.state = 'playing';
+});
+document.getElementById('btnRetry').addEventListener('click', ()=>{ hideAllOverlays(); spInit(); });
+document.getElementById('btnAgain').addEventListener('click', ()=>{ hideAllOverlays(); spInit(); });
+document.getElementById('btnLoseMenu').addEventListener('click', ()=>{ hideAllOverlays(); leaveCurrentGame(); navStack=[]; showScreen('menu',{isBack:true}); });
+document.getElementById('btnWinMenu').addEventListener('click', ()=>{ hideAllOverlays(); leaveCurrentGame(); navStack=[]; showScreen('menu',{isBack:true}); });
+document.getElementById('btnRoomWinMenu').addEventListener('click', ()=>{ hideAllOverlays(); leaveCurrentGame(); navStack=[]; showScreen('menu',{isBack:true}); });
+
+window.addEventListener('beforeunload', ()=>{
+  if(MP.roomId && MP.playerId){ remove(ref(db, `rooms/${MP.roomId}/players/${MP.playerId}`)); }
+});
+</script>
+
+</body>
+</html>
